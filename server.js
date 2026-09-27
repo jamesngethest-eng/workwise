@@ -146,6 +146,48 @@ async function handleApi(request, response, url) {
     return sendJson(response, 200, { id: user.id, email: user.email, name: user.name, role: user.role });
   }
 
+  if (pathname === '/api/profile' && method === 'GET') {
+    if (!user) return sendJson(response, 401, { error: 'Sign in to edit your profile.' });
+    return sendJson(response, 200, {
+      name: user.name,
+      profile: {
+        title: user.profile?.title || '',
+        location: user.profile?.location || '',
+        bio: user.profile?.bio || '',
+        skills: Array.isArray(user.profile?.skills) ? user.profile.skills : [],
+        portfolioUrl: user.profile?.portfolioUrl || ''
+      }
+    });
+  }
+
+  if (pathname === '/api/profile' && method === 'PATCH') {
+    if (!user) return sendJson(response, 401, { error: 'Sign in to edit your profile.' });
+    const body = await readJson(request, 20_000);
+    const name = String(body.name || '').trim();
+    const profile = body.profile && typeof body.profile === 'object' ? body.profile : {};
+    if (name.length < 2 || name.length > 60) return sendJson(response, 400, { error: 'Enter a name between 2 and 60 characters.' });
+    const title = String(profile.title || '').trim();
+    const location = String(profile.location || '').trim();
+    const bio = String(profile.bio || '').trim();
+    const portfolioUrl = String(profile.portfolioUrl || '').trim();
+    const skills = Array.isArray(profile.skills) ? [...new Set(profile.skills.map(skill => String(skill).trim()).filter(Boolean))].slice(0, 12) : [];
+    if (title.length > 80 || location.length > 80 || bio.length > 600 || skills.some(skill => skill.length > 40)) {
+      return sendJson(response, 400, { error: 'One or more profile fields are too long.' });
+    }
+    if (portfolioUrl) {
+      try {
+        const parsedUrl = new URL(portfolioUrl);
+        if (!['http:', 'https:'].includes(parsedUrl.protocol)) throw new Error();
+      } catch {
+        return sendJson(response, 400, { error: 'Enter a valid portfolio URL starting with https:// or http://.' });
+      }
+    }
+    user.name = name;
+    user.profile = { title, location, bio, skills, portfolioUrl };
+    saveDatabase();
+    return sendJson(response, 200, { name: user.name, role: user.role, profile: user.profile });
+  }
+
   if (method === 'GET' && pathname === '/api/admin/setup-needed') {
     return sendJson(response, 200, { needed: !database.users.some(item => item.role === 'admin'), setupKeyRequired: Boolean(process.env.WORKWISE_ADMIN_SETUP_KEY) });
   }

@@ -1,0 +1,22 @@
+.profile-dialog{width:min(620px,calc(100vw - 32px));max-height:calc(100vh - 32px);padding:0;border:1px solid #e5eae5;border-radius:15px;color:#29372f;box-shadow:0 24px 80px #10201738}
+.profile-dialog::backdrop{background:#14241eb3;backdrop-filter:blur(3px)}
+.profile-dialog form{display:flex;flex-direction:column;gap:14px;padding:27px;overflow:auto}
+.profile-dialog-heading{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:3px}
+.profile-dialog-heading h2{margin:6px 0 0;font-size:22px}
+.profile-dialog-close{width:33px;height:33px;border:0;border-radius:8px;background:#f3f6f3;color:#607168;font-size:23px;line-height:1}
+.profile-dialog label{display:flex;flex-direction:column;gap:6px;color:#4b5b51;font-size:11px;font-weight:700}
+.profile-dialog label small{color:#89958e;font-size:9px;font-weight:400}
+.profile-dialog input,.profile-dialog textarea{width:100%;border:1px solid #dfe6df;border-radius:7px;background:#fff;padding:10px 11px;color:#29372f;font:12px 'DM Sans',sans-serif;outline-color:#80aa8a}
+.profile-dialog textarea{resize:vertical;min-height:92px;line-height:1.5}
+.profile-dialog .form-two{gap:12px}
+.profile-form-error{padding:10px 12px;border-radius:7px;background:#fff0ed;color:#a74437;font-size:11px}
+.profile-dialog-actions{display:flex;justify-content:flex-end;gap:9px;padding-top:3px}
+.profile-dialog-actions .outline-btn,.profile-dialog-actions .primary-btn{padding:10px 14px;font-size:11px}
+.profile-bio{margin:-5px 0 12px;color:#77847c;font-size:10px;line-height:1.5}
+.profile-skill-tags{display:flex;flex-wrap:wrap;gap:5px;margin:-6px 0 14px}
+.profile-skill-tags:empty{display:none}
+.profile-skill-tags span{padding:4px 7px;border-radius:4px;background:#f0f5ef;color:#5c7562;font-size:9px}
+.mini-profile small{color:#89958e;font-size:9px}
+.profile-portfolio-link{display:inline-block;margin:-7px 0 12px 52px;color:var(--green);font-size:10px;font-weight:700;text-decoration:none}
+.employer-actions{display:flex;gap:9px}
+@media(max-width:560px){.profile-dialog form{padding:21px 18px}.profile-dialog .form-two{grid-template-columns:1fr}.employer-actions{flex-wrap:wrap}}

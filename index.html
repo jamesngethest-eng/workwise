@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="community.css" />
   <link rel="stylesheet" href="account.css" />
+  <link rel="stylesheet" href="profile.css" />
   <link rel="stylesheet" href="application.css" />
   <link rel="stylesheet" href="account-login.css" />
 </head>
@@ -44,7 +45,7 @@
       <p class="login-legal">By continuing, you agree to Workwise’s <a href="#">Terms</a> and <a href="#">Privacy Policy</a>.</p><button class="text-btn" id="loginBack">← Back to Workwise</button>
     </section>
     <section class="account-page employer-page" id="employerPage" hidden>
-      <div class="employer-welcome"><div><div class="eyebrow green-text">EMPLOYER WORKSPACE</div><h1>Find your next great hire <span>✦</span></h1><p>Post a job and connect with independent talent.</p></div><button class="outline-btn" id="switchRole">Switch to freelancer view</button></div>
+      <div class="employer-welcome"><div><div class="eyebrow green-text">EMPLOYER WORKSPACE</div><h1>Find your next great hire <span>✦</span></h1><p>Post a job and connect with independent talent.</p></div><div class="employer-actions"><button class="outline-btn" id="employerEditProfile">Edit profile</button><button class="outline-btn" id="switchRole">Switch to freelancer view</button></div></div>
       <div class="employer-grid"><section class="employer-card post-card"><div class="employer-card-heading"><div><div class="eyebrow green-text">NEW OPPORTUNITY</div><h2>Post a job</h2><p>Share the details. The right people will find you.</p></div><span class="post-icon">＋</span></div>
         <form id="postJobForm" class="post-job-form"><label>Job title<input id="postTitle" required maxlength="100" placeholder="e.g. Product designer for a mobile app"></label><div class="form-two"><label>Category<select id="postCategory" required><option value="">Choose a category</option><option>Design & Creative</option><option>Development & IT</option><option>Writing & Translation</option><option>Sales & Marketing</option><option>Finance & Accounting</option></select></label><label>Experience level<select id="postLevel" required><option value="">Choose a level</option><option>Entry level</option><option>Intermediate</option><option>Expert</option></select></label></div><label>Describe the work<textarea id="postDescription" required rows="5" maxlength="1200" placeholder="What will the freelancer work on? Include goals, skills, and deliverables."></textarea></label><div class="form-two"><label>Budget type<select id="postType"><option>Fixed price</option><option>Hourly</option></select></label><label>Budget<input id="postBudget" required placeholder="e.g. $1,500 or $40–60 / hr"></label></div><button class="primary-btn post-submit" type="submit">Publish job <span>↗</span></button><p class="form-hint">Your job will be visible to freelancers in the Workwise marketplace.</p></form></section>
         <aside class="employer-side"><section class="employer-card stats-card"><div class="side-title">YOUR ACTIVITY</div><div class="employer-stat"><span class="stat-icon green">▣</span><span>Jobs posted</span><b id="employerJobCount">0</b></div><div class="employer-stat"><span class="stat-icon lilac">♧</span><span>Proposals received</span><b id="employerProposalCount">0</b></div><div class="employer-stat"><span class="stat-icon peach">☆</span><span>Shortlisted talent</span><b>0</b></div></section><section class="employer-card posted-card"><div class="side-title">YOUR JOB POSTS <span class="live-dot">●</span></div><div id="postedJobs" class="posted-jobs"><div class="posted-empty">Your published jobs will appear here.</div></div></section><section class="employer-card proposal-card"><div class="side-title">RECENT PROPOSALS</div><div id="employerProposals" class="employer-proposals"><div class="posted-empty">Applications for your jobs will appear here.</div></div></section><section class="employer-tip"><span>✦</span><strong>Good projects attract great talent.</strong><p>Clear goals and a thoughtful description help freelancers understand what success looks like.</p></section></aside>
@@ -52,7 +53,7 @@
     </section>
     <section class="welcome">
       <div><div class="eyebrow"><span class="spark">✳</span> MONDAY, SEPTEMBER 22</div><h1>Good morning, Jamie <span>✦</span></h1><p class="welcome-copy">The right opportunity is out there. Let's find it.</p></div>
-      <button class="outline-btn" id="profileBtn"><span>＋</span> Complete your profile <b>70%</b></button>
+      <button class="outline-btn" id="profileBtn"><span>＋</span> Edit your profile <b id="profileTopStrength">70%</b></button>
     </section>
 
     <section class="search-panel" aria-label="Search jobs">
@@ -66,8 +67,10 @@
       <aside class="sidebar">
         <section class="side-card profile-card">
           <div class="side-title">YOUR PROFILE <button class="more" aria-label="More profile options">···</button></div>
-          <div class="mini-profile"><span class="avatar avatar-you large">JD</span><div><strong>Jamie Davis</strong><span>Product Designer</span></div><span class="verified">✓</span></div>
-          <div class="profile-progress"><span></span></div><div class="progress-caption"><span>Profile strength</span><b>70%</b></div>
+          <div class="mini-profile"><span class="avatar avatar-you large" id="profileAvatar">JD</span><div><strong id="profileDisplayName">Jamie Davis</strong><span id="profileDisplayTitle">Product Designer</span><small id="profileDisplayLocation" hidden></small></div><span class="verified">✓</span></div>
+          <a class="profile-portfolio-link" id="profilePortfolioPreview" target="_blank" rel="noopener noreferrer" hidden>View portfolio ↗</a>
+          <p class="profile-bio" id="profileBioPreview" hidden></p><div class="profile-skill-tags" id="profileSkillPreview"></div>
+          <div class="profile-progress"><span id="profileProgressBar"></span></div><div class="progress-caption"><span>Profile strength</span><b id="profileStrength">70%</b></div>
           <a href="#" class="side-link" id="editProfile">Improve your profile <span>→</span></a>
         </section>
         <section class="side-card stat-card"><div class="side-title">YOUR ACTIVITY <span class="live-dot">●</span></div><div class="stat-row"><span class="stat-icon green">↗</span><span>Profile views</span><b>24 <small>this week</small></b></div><div class="stat-row"><span class="stat-icon lilac">▣</span><span>Applications sent</span><b>8 <small>this month</small></b></div><div class="stat-row"><span class="stat-icon peach">♡</span><span>Jobs saved</span><b id="sideSavedCount">0</b></div></section>
@@ -87,6 +90,18 @@
   </main>
   <div class="toast" id="toast" role="status"></div>
   <div class="modal-backdrop" id="modal" hidden><section class="job-modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><button class="modal-close" id="modalClose" aria-label="Close">×</button><div id="modalContent"></div></section></div>
+  <dialog class="profile-dialog" id="profileDialog" aria-labelledby="profileDialogTitle">
+    <form id="profileEditForm">
+      <div class="profile-dialog-heading"><div><div class="eyebrow green-text">YOUR WORKWISE PROFILE</div><h2 id="profileDialogTitle">Edit your profile</h2></div><button type="button" class="profile-dialog-close" id="closeProfileDialog" aria-label="Close">×</button></div>
+      <label>Full name<input id="profileNameInput" required minlength="2" maxlength="60" autocomplete="name"></label>
+      <div class="form-two"><label>Professional title<input id="profileTitleInput" maxlength="80" placeholder="e.g. Product designer"></label><label>Location<input id="profileLocationInput" maxlength="80" autocomplete="address-level2" placeholder="e.g. Bucharest, Romania"></label></div>
+      <label>About you<textarea id="profileBioInput" rows="4" maxlength="600" placeholder="Describe your experience and the work you do."></textarea></label>
+      <label>Skills <small>Separate each skill with a comma</small><input id="profileSkillsInput" maxlength="500" placeholder="Figma, User research, Prototyping"></label>
+      <label>Portfolio website<input id="profilePortfolioInput" type="url" maxlength="300" placeholder="https://your-portfolio.com"></label>
+      <div class="profile-form-error" id="profileFormError" role="alert" hidden></div>
+      <div class="profile-dialog-actions"><button type="button" class="outline-btn" id="cancelProfileEdit">Cancel</button><button type="submit" class="primary-btn" id="saveProfileButton">Save profile</button></div>
+    </form>
+  </dialog>
   <script src="app.js"></script>
   <script src="community.js"></script>
   <script src="account.js"></script>
