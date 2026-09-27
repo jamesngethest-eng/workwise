@@ -1,0 +1,13 @@
+{
+  "name": "workwise-marketplace",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Workwise freelance marketplace demo",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node start-server.js"
+  }
+}

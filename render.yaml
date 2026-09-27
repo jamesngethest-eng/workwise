@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: workwise-marketplace
+    runtime: node
+    # Free tier: instance storage is temporary, so app data is lost on restart/redeploy.
+    plan: free
+    region: frankfurt
+    buildCommand: npm install --omit=dev
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 24.21.0
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 10000
+      - key: WORKWISE_DATA_DIR
+        value: .workwise-data
+      - key: WORKWISE_ADMIN_SETUP_KEY
+        sync: false

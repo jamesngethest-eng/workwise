@@ -1,0 +1,1 @@
+html:not(.admin-authenticated) body{display:none}.admin-top-actions{display:flex;align-items:center;gap:18px}.admin-logout{border:1px solid #e6e8f0;background:#fff;border-radius:6px;padding:7px 10px;color:#596681;font-size:9px;font-weight:700}.admin-logout:hover{background:#f5f6fb;color:#4a60d8}@media(max-width:560px){.admin-top-actions{gap:8px}.admin-logout{padding:7px}}

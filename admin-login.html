@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="theme-color" content="#202c53">
+  <title>Admin sign in · Workwise</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="admin-login.css">
+</head>
+<body>
+  <main class="login-layout">
+    <section class="login-art"><a href="index.html" class="login-brand"><span class="brand-mark">w</span> workwise</a><div class="art-copy"><span class="art-kicker">ADMIN WORKSPACE</span><h1>Make good work<br>happen.</h1><p>Manage listings and keep the Workwise marketplace moving.</p></div><div class="art-shape shape-one"></div><div class="art-shape shape-two"></div><div class="art-foot">Your marketplace, thoughtfully managed.</div></section>
+    <section class="login-content"><div class="login-box"><div class="mobile-brand"><span class="brand-mark">w</span> workwise</div><div class="login-icon">✳</div><div class="login-kicker">ADMIN ACCESS</div><h2 id="loginTitle">Welcome back</h2><p class="login-desc" id="loginDescription">Sign in to continue to your admin dashboard.</p><form id="adminLoginForm"><label>Email address<input type="email" id="adminEmail" required autocomplete="username" placeholder="admin@example.com"></label><label>Password<span class="password-wrap"><input type="password" id="adminPassword" required autocomplete="current-password" placeholder="Enter your password"><button type="button" id="togglePassword" aria-label="Show password">Show</button></span></label><div class="login-error" id="loginError" role="alert" hidden></div><button class="sign-in-btn" id="loginSubmit" type="submit">Sign in <span>↗</span></button></form><div class="demo-access" id="setupHint" hidden><strong>First visit?</strong><span>Create the admin account for this server.</span><span>Use a strong password with at least 10 characters.</span></div><a class="back-market" href="index.html">← Back to marketplace</a><p class="demo-note">Admin credentials are checked and stored by the Workwise server.</p></div></section>
+  </main>
+  <script src="admin-login.js"></script>
+</body>
+</html>
