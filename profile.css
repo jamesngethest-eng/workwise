@@ -17,6 +17,8 @@
 .profile-skill-tags:empty{display:none}
 .profile-skill-tags span{padding:4px 7px;border-radius:4px;background:#f0f5ef;color:#5c7562;font-size:9px}
 .mini-profile small{color:#89958e;font-size:9px}
+.profile-name-button{align-self:flex-start;padding:0;border:0;background:transparent;color:#25362d;font:700 13px 'DM Sans',sans-serif;text-align:left;cursor:pointer}
+.profile-name-button:hover{color:var(--green);text-decoration:underline}
 .profile-portfolio-link{display:inline-block;margin:2px 0;color:var(--green);font-size:9px;font-weight:700;text-decoration:none}
 .employer-actions{display:flex;gap:9px}
 @media(max-width:560px){.profile-dialog form{padding:21px 18px}.profile-dialog .form-two{grid-template-columns:1fr}.employer-actions{flex-wrap:wrap}}

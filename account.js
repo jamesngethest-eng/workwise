@@ -38,6 +38,7 @@ if(localStorage.getItem('workwise-user-name')){document.getElementById('accountN
 document.getElementById('profileBtn').addEventListener('click',openProfileEditor);
 document.getElementById('employerEditProfile').addEventListener('click',openProfileEditor);
 document.getElementById('editProfile').addEventListener('click',event=>{event.preventDefault();openProfileEditor()});
+document.getElementById('profileDisplayName').addEventListener('click',openProfileEditor);
 document.getElementById('tipLink').addEventListener('click',event=>{event.preventDefault();openProfileEditor()});
 document.getElementById('closeProfileDialog').addEventListener('click',()=>document.getElementById('profileDialog').close());
 document.getElementById('cancelProfileEdit').addEventListener('click',()=>document.getElementById('profileDialog').close());

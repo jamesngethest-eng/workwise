@@ -34,7 +34,7 @@
         <aside class="conversation-sidebar"><div class="conversation-top"><h2>Messages</h2><button class="compose-btn" id="newMessage" aria-label="New message">＋</button></div><label class="conversation-search"><span>⌕</span><input id="conversationSearch" type="search" placeholder="Search conversations" aria-label="Search conversations"></label><div class="conversation-list" id="conversationList"></div></aside>
         <section class="chat-panel" id="chatPanel"><div class="chat-empty"><div class="chat-empty-icon">✉</div><h2>Your conversations, all in one place</h2><p>Choose a client to pick up where you left off.</p></div></section>
       </section>
-      <footer class="main-footer"><span>© 2025 Workwise, Inc.</span><a href="#">Terms of Service</a><a href="#">Privacy Policy</a><a href="#">Cookie Settings</a></footer>
+      <footer class="main-footer"><span>© <span data-current-year>2025</span> Workwise, Inc.</span><a href="#">Terms of Service</a><a href="#">Privacy Policy</a><a href="#">Cookie Settings</a></footer>
     </section>
     <section class="account-page" id="loginPage" hidden>
       <div class="login-brand"><span class="brand-mark">w</span><span>Welcome to Workwise</span></div>
@@ -52,7 +52,7 @@
       </div>
     </section>
     <section class="welcome">
-      <div><div class="eyebrow"><span class="spark">✳</span> MONDAY, SEPTEMBER 22</div><h1>Good morning, Jamie <span>✦</span></h1><p class="welcome-copy">The right opportunity is out there. Let's find it.</p></div>
+      <div><div class="eyebrow"><span class="spark">✳</span> <time id="welcomeDate"></time></div><h1>Good morning, Jamie <span>✦</span></h1><p class="welcome-copy">The right opportunity is out there. Let's find it.</p></div>
       <button class="outline-btn" id="profileBtn"><span>＋</span> Edit your profile <b id="profileTopStrength">70%</b></button>
     </section>
 
@@ -67,14 +67,14 @@
       <aside class="sidebar">
         <section class="side-card profile-card">
           <div class="side-title">YOUR PROFILE <button class="more" aria-label="More profile options">···</button></div>
-          <div class="mini-profile"><span class="avatar avatar-you large" id="profileAvatar">JD</span><div><strong id="profileDisplayName">Jamie Davis</strong><a class="profile-portfolio-link" id="profilePortfolioPreview" target="_blank" rel="noopener noreferrer" hidden>View portfolio ↗</a><span id="profileDisplayTitle">Product Designer</span><small id="profileDisplayLocation" hidden></small></div><span class="verified">✓</span></div>
+          <div class="mini-profile"><span class="avatar avatar-you large" id="profileAvatar">JD</span><div><button type="button" class="profile-name-button" id="profileDisplayName">Jamie Davis</button><a class="profile-portfolio-link" id="profilePortfolioPreview" target="_blank" rel="noopener noreferrer" hidden>View portfolio ↗</a><span id="profileDisplayTitle">Product Designer</span><small id="profileDisplayLocation" hidden></small></div><span class="verified">✓</span></div>
           <p class="profile-bio" id="profileBioPreview" hidden></p><div class="profile-skill-tags" id="profileSkillPreview"></div>
           <div class="profile-progress"><span id="profileProgressBar"></span></div><div class="progress-caption"><span>Profile strength</span><b id="profileStrength">70%</b></div>
-          <a href="#" class="side-link" id="editProfile">Improve your profile <span>→</span></a>
+          <a href="#" class="side-link" id="editProfile">Edit profile <span>→</span></a>
         </section>
         <section class="side-card stat-card"><div class="side-title">YOUR ACTIVITY <span class="live-dot">●</span></div><div class="stat-row"><span class="stat-icon green">↗</span><span>Profile views</span><b>24 <small>this week</small></b></div><div class="stat-row"><span class="stat-icon lilac">▣</span><span>Applications sent</span><b>8 <small>this month</small></b></div><div class="stat-row"><span class="stat-icon peach">♡</span><span>Jobs saved</span><b id="sideSavedCount">0</b></div></section>
         <section class="side-card tip-card"><div class="tip-spark">✦</div><div class="side-title">A TIP FOR YOU</div><p>Freelancers with a complete profile are <strong>4× more likely</strong> to get hired.</p><a href="#" id="tipLink">Add your portfolio <span>→</span></a></section>
-        <div class="sidebar-foot"><a href="#">Help center</a><span>·</span><a href="#">Community</a><span>·</span><a href="#">© 2025 Workwise</a></div>
+        <div class="sidebar-foot"><a href="#">Help center</a><span>·</span><a href="#">Community</a><span>·</span><a href="#">© <span data-current-year>2025</span> Workwise</a></div>
       </aside>
 
       <section class="jobs-area">
@@ -83,7 +83,7 @@
         <div class="job-list" id="jobList"></div>
         <div class="empty-state" id="emptyState" hidden><div>⌕</div><h3>No jobs found</h3><p>Try a different search or adjust your filters.</p><button class="outline-btn" id="clearFilters">Clear filters</button></div>
         <button class="load-more" id="loadMore">Load more jobs <span>↓</span></button>
-        <footer class="main-footer"><span>© 2025 Workwise, Inc.</span><a href="#">Terms of Service</a><a href="#">Privacy Policy</a><a href="#">Cookie Settings</a><a href="admin.html">Admin</a><span class="footer-right">Made for the work you love <b>♥</b></span></footer>
+        <footer class="main-footer"><span>© <span data-current-year>2025</span> Workwise, Inc.</span><a href="#">Terms of Service</a><a href="#">Privacy Policy</a><a href="#">Cookie Settings</a><a href="admin.html">Admin</a><span class="footer-right">Made for the work you love <b>♥</b></span></footer>
       </section>
     </div>
   </main>
