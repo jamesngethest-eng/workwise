@@ -123,6 +123,11 @@ function getOrCreateConversation(participantIds, details = {}) {
   return conversation;
 }
 
+function profileSummary(userId) {
+  const profile = database.users.find(item => item.id === userId)?.profile || {};
+  return { title: profile.title || '', location: profile.location || '', skills: Array.isArray(profile.skills) ? profile.skills : [], portfolioUrl: profile.portfolioUrl || '' };
+}
+
 function describeConversation(conversation, viewerId) {
   const peer = database.users.find(user => conversation.participantIds.find(id => id !== viewerId) === user.id);
   const job = database.jobs.find(item => String(item.id) === String(conversation.jobId));
@@ -257,6 +262,8 @@ async function handleApi(request, response, url) {
     if (!requireRole('employer')) return;
     const body = await readJson(request, 80_000);
     if (!String(body.title || '').trim() || !String(body.description || '').trim()) return sendJson(response, 400, { error: 'Job title and description are required.' });
+    const duplicate = database.jobs.find(item => item.ownerId === user.id && item.title === String(body.title).trim() && item.description === String(body.description).trim() && Date.now() - Date.parse(item.createdAt) < 60_000);
+    if (duplicate) return sendJson(response, 200, duplicate);
     const job = { id: crypto.randomUUID(), ownerId: user.id, client: String(body.client || user.name), title: String(body.title).trim(), category: String(body.category || 'Design & Creative'), level: String(body.level || 'Intermediate'), description: String(body.description).trim(), type: body.type === 'Hourly' || body.type === 'hourly' ? 'Hourly' : 'Fixed price', budget: String(body.budget || '').trim(), tags: Array.isArray(body.tags) ? body.tags : [String(body.category || 'Design & Creative')], status: 'published', createdAt: new Date().toISOString() };
     database.jobs.push(job); saveDatabase();
     return sendJson(response, 201, job);
@@ -267,10 +274,32 @@ async function handleApi(request, response, url) {
     return sendJson(response, 200, database.jobs.filter(job => job.ownerId === user.id));
   }
 
+  if (method === 'DELETE' && pathname.startsWith('/api/employer/jobs/')) {
+    if (!requireRole('employer')) return;
+    const id = decodeURIComponent(pathname.slice('/api/employer/jobs/'.length));
+    const index = database.jobs.findIndex(job => String(job.id) === id && job.ownerId === user.id);
+    if (index < 0) return sendJson(response, 404, { error: 'Job not found in your posts.' });
+    database.jobs.splice(index, 1);
+    saveDatabase();
+    return sendJson(response, 200, { ok: true });
+  }
+
   if (method === 'GET' && pathname === '/api/employer/applications') {
     if (!requireRole('employer')) return;
     const owned = new Set(database.jobs.filter(job => job.ownerId === user.id).map(job => job.id));
-    return sendJson(response, 200, database.applications.filter(application => owned.has(application.jobId)).map(({ attachments, ...application }) => ({ ...application, conversationId: database.conversations.find(item => item.applicationId === application.id)?.id || null, status: application.status || 'pending', attachments: Object.fromEntries(Object.entries(attachments || {}).map(([kind, value]) => [kind, value.originalName])) })));
+    return sendJson(response, 200, database.applications.filter(application => owned.has(application.jobId)).map(({ attachments, ...application }) => ({ ...application, conversationId: database.conversations.find(item => item.applicationId === application.id)?.id || null, applicantProfile: profileSummary(application.applicantId), status: application.status || 'pending', attachments: Object.fromEntries(Object.entries(attachments || {}).map(([kind, value]) => [kind, value.originalName])) })));
+  }
+
+  if (method === 'POST' && pathname.startsWith('/api/employer/applications/') && pathname.endsWith('/conversation')) {
+    if (!requireRole('employer')) return;
+    if (user.role !== 'employer') return sendJson(response, 403, { error: 'Only the employer who posted the job can message applicants.' });
+    const applicationId = pathname.slice('/api/employer/applications/'.length, -'/conversation'.length);
+    const application = database.applications.find(item => item.id === applicationId);
+    const job = application && database.jobs.find(item => String(item.id) === String(application.jobId));
+    if (!application || !job || job.ownerId !== user.id) return sendJson(response, 404, { error: 'Proposal not found for your jobs.' });
+    const conversation = getOrCreateConversation([user.id, application.applicantId], { kind: 'application', jobId: job.id, applicationId: application.id, status: application.status === 'accepted' ? 'accepted' : 'open' });
+    saveDatabase();
+    return sendJson(response, 200, { conversationId: conversation.id, conversation: describeConversation(conversation, user.id) });
   }
 
   if (method === 'POST' && pathname.startsWith('/api/employer/applications/') && pathname.endsWith('/accept')) {
@@ -326,7 +355,6 @@ async function handleApi(request, response, url) {
     if (!conversation || !conversation.participantIds.includes(user.id)) return sendJson(response, 404, { error: 'Conversation not found.' });
     if (method === 'GET' && parts.length === 3) return sendJson(response, 200, describeConversation(conversation, user.id));
     if (method === 'POST' && parts[3] === 'messages') {
-      if (conversation.kind === 'application' && conversation.status !== 'accepted') return sendJson(response, 403, { error: 'Messaging opens when the employer accepts the proposal.' });
       const body = await readJson(request, 10_000);
       const message = String(body.message || '').trim();
       if (!message || message.length > 4000) return sendJson(response, 400, { error: 'Enter a message of 1 to 4,000 characters.' });

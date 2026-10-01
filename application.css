@@ -1,3 +1,29 @@
 .apply-heading{margin-bottom:19px}.apply-back{display:block;border:0;background:transparent;color:#688071;font-size:10px;font-weight:600;padding:0;margin-bottom:19px}.apply-heading h2{font-size:20px;line-height:1.3;margin:6px 0}.apply-heading p{font-size:11px;color:#839087;margin:0;line-height:1.5}.application-form{display:flex;flex-direction:column;gap:14px}.application-form>label,.application-grid>label{display:flex;flex-direction:column;gap:6px;font-size:10px;font-weight:700;color:#47564d}.application-form input:not([type=file]),.application-form select,.application-form textarea{width:100%;border:1px solid #e2e8e2;border-radius:7px;padding:10px 11px;font:11px 'DM Sans',sans-serif;color:#29372e;outline-color:#89b493;background:#fff}.application-form input::placeholder,.application-form textarea::placeholder{color:#a4ada7}.application-form textarea{resize:vertical;line-height:1.55}.application-grid,.upload-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}.field-hint{font-size:9px;font-weight:400;color:#96a099}.upload-field{position:relative;min-height:100px;border:1px dashed #cbd9cc;border-radius:8px;background:#f8fbf8;padding:12px;display:flex;flex-direction:column;gap:5px;overflow:hidden;cursor:pointer}.upload-field:hover{background:#f0f7f1;border-color:#82ad8b}.upload-title{font-size:10px;font-weight:700;color:#405046}.upload-title b{margin-left:4px;color:#be6a4e;font-size:8px;text-transform:uppercase;letter-spacing:.3px}.upload-title b.optional{color:#859189}.upload-copy{font-size:9px;color:#929e96;line-height:1.45}.upload-field input[type=file]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}.file-name{margin-top:auto;font-size:9px;color:#397453;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.application-footer{border-top:1px solid #edf0ed;padding-top:13px;display:flex;align-items:center;justify-content:space-between;gap:12px}.application-footer>span{font-size:9px;color:#929d96;line-height:1.45}.application-footer button{flex:none}.application-success{text-align:center;padding:30px 10px}.application-success>span{width:46px;height:46px;margin:0 auto 15px;display:grid;place-items:center;background:#eaf5ec;color:#47865b;border-radius:50%;font-size:22px}.application-success h2{font:700 22px Manrope;margin:7px 0}.application-success p{font-size:11px;color:#78857d;line-height:1.6;max-width:430px;margin:0 auto 20px}.posted-job small{font-size:9px;color:#526f5e}.posted-job .job-status{display:inline-block}.posted-job .proposal-count{font-size:9px;color:#7564b7;background:#f2effb;border-radius:10px;padding:3px 7px;margin-left:5px;display:inline-block}
 .employer-proposals{display:flex;flex-direction:column;gap:10px;margin-top:12px}.employer-proposal{border-top:1px solid #edf0ed;padding-top:10px}.employer-proposal strong{font-size:10px;color:#35443a}.employer-proposal .proposal-job{font-size:9px;color:#7d8981;margin-top:3px}.employer-proposal p{font-size:9px;line-height:1.5;color:#738077;margin:7px 0}.proposal-files{display:flex;flex-wrap:wrap;gap:5px}.proposal-file{border:1px solid #e3e9e3;border-radius:5px;background:#f8faf8;color:#397453;padding:5px 7px;font-size:8px;cursor:pointer}.proposal-file:hover{background:#edf5ee}.proposal-file:disabled{opacity:.5;cursor:wait}
 @media(max-width:560px){.application-grid,.upload-grid{grid-template-columns:1fr}.application-footer{align-items:stretch;flex-direction:column}.application-footer button{width:100%}.apply-heading h2{font-size:18px}}
+
+/* --- client workspace: navigation, delete, proposals --- */
+.employer-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+.employer-tabs a{display:inline-flex;align-items:center;gap:6px;border:1px solid #dfe6df;background:#fff;color:#35443a;border-radius:999px;padding:9px 15px;font-size:12px;font-weight:600;cursor:pointer;user-select:none}
+.employer-tabs a:hover{background:#eef6ee;color:#176b50}
+.employer-tabs b{background:#7564b7;color:#fff;border-radius:10px;padding:1px 7px;font-size:10px}
+.posted-job .posted-delete{display:block;margin-top:9px;border:1px solid #efd3d3;background:#fff;color:#b04444;border-radius:6px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer}
+.posted-job .posted-delete:hover{background:#fbeeee}
+.proposal-section{margin-top:22px}
+.proposal-section .employer-proposals{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px}
+.employer-proposal{border:1px solid #e6ebe6;border-radius:12px;padding:15px;background:#fff}
+.employer-proposal strong{font-size:14px}
+.employer-proposal .proposal-person,.employer-proposal .proposal-skills{display:block;font-size:11px;color:#6d7a72;margin-top:3px}
+.employer-proposal .proposal-job{font-size:11px;margin-top:8px}
+.employer-proposal p{font-size:12px;max-height:130px;overflow:auto}
+.proposal-file{font-size:10px}
+.proposal-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:12px}
+.proposal-actions button{border-radius:8px;padding:8px 13px;font-size:12px;font-weight:700;cursor:pointer}
+.proposal-message-btn{background:#176b50;color:#fff;border:1px solid #176b50}
+.proposal-message-btn:hover{background:#12573f}
+.proposal-accept-btn{background:#fff;color:#176b50;border:1px solid #176b50}
+.proposal-accept-btn:hover{background:#eef6ee}
+.proposal-actions button:disabled{opacity:.6;cursor:default}
+.proposal-badge{color:#2f7a4b;background:#e8f4ea;border-radius:10px;padding:5px 10px;font-size:11px;font-weight:700}
+.employer-card h2,.posted-job strong,.employer-stat span{color:#1c2922}
+.employer-proposal p{color:#4d5a52}
