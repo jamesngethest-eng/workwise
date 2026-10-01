@@ -288,13 +288,26 @@ async function handleApi(request, response, url) {
     return sendJson(response, 200, { status: application.status, conversationId: conversation.id, conversation: describeConversation(conversation, user.id) });
   }
 
+  if (method === 'GET' && pathname === '/api/admin/clients') {
+    if (!requireRole('admin')) return;
+    const clients = database.users.filter(item => item.role === 'employer').map(item => ({
+      id: item.id, name: item.name, email: item.email, joinedAt: item.createdAt,
+      jobCount: database.jobs.filter(job => job.ownerId === item.id && job.status !== 'removed').length
+    })).sort((a, b) => String(b.joinedAt || '').localeCompare(String(a.joinedAt || '')));
+    return sendJson(response, 200, clients);
+  }
+
   if (method === 'POST' && pathname === '/api/admin/conversations') {
     if (!requireRole('admin')) return;
     const body = await readJson(request, 10_000);
     const recipient = database.users.find(item => item.id === body.recipientId && item.role === 'employer');
-    const job = database.jobs.find(item => String(item.id) === String(body.jobId) && item.ownerId === recipient?.id);
-    if (!recipient || !job) return sendJson(response, 404, { error: 'The hirer or project could not be found.' });
-    const conversation = getOrCreateConversation([user.id, recipient.id], { kind: 'admin-hirer', jobId: job.id, status: 'open' });
+    if (!recipient) return sendJson(response, 404, { error: 'The hirer could not be found.' });
+    let job = null;
+    if (body.jobId) {
+      job = database.jobs.find(item => String(item.id) === String(body.jobId) && item.ownerId === recipient.id);
+      if (!job) return sendJson(response, 404, { error: 'That project does not belong to this hirer.' });
+    }
+    const conversation = getOrCreateConversation([user.id, recipient.id], { kind: 'admin-hirer', jobId: job ? job.id : null, status: 'open' });
     saveDatabase();
     return sendJson(response, 201, describeConversation(conversation, user.id));
   }
