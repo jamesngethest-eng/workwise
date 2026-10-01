@@ -21,4 +21,6 @@
 .profile-name-button:hover{color:var(--green);text-decoration:underline}
 .profile-portfolio-link{display:inline-block;margin:2px 0;color:var(--green);font-size:9px;font-weight:700;text-decoration:none}
 .employer-actions{display:flex;gap:9px}
-@media(max-width:560px){.profile-dialog form{padding:21px 18px}.profile-dialog .form-two{grid-template-columns:1fr}.employer-actions{flex-wrap:wrap}}
+.header-auth-btn{border:1px solid #dce3dc;border-radius:7px;background:#fff;padding:8px 11px;color:#3f5e4a;font-size:11px;font-weight:700;white-space:nowrap}
+.header-auth-btn:hover{background:#f1f7f2}
+@media(max-width:560px){.profile-dialog form{padding:21px 18px}.profile-dialog .form-two{grid-template-columns:1fr}.employer-actions{flex-wrap:wrap}.header-auth-btn{padding:6px 8px;font-size:10px}}

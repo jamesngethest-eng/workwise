@@ -10,8 +10,9 @@ const dataDir = path.resolve(process.env.WORKWISE_DATA_DIR || path.join(root, '.
 const uploadDir = path.join(dataDir, 'uploads');
 const dbPath = path.join(dataDir, 'database.json');
 fs.mkdirSync(uploadDir, { recursive: true });
-const sessions = new Map();
 let database = loadDatabase();
+database.sessions ||= [];
+database.conversations ||= [];
 const types = {
   '.css': 'text/css; charset=utf-8',
   '.html': 'text/html; charset=utf-8',
@@ -67,8 +68,8 @@ function readJson(request, maxBytes = 16 * 1024 * 1024) {
   });
 }
 
-function cookieOptions() {
-  return `Path=/; HttpOnly; SameSite=Lax${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`;
+function cookieOptions(maxAgeSeconds) {
+  return `Path=/; HttpOnly; SameSite=Lax${maxAgeSeconds ? `; Max-Age=${maxAgeSeconds}` : ''}${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`;
 }
 
 function isLocalRequest(request) {
@@ -79,14 +80,21 @@ function isLocalRequest(request) {
 function sessionUser(request) {
   const cookie = request.headers.cookie || '';
   const token = cookie.split(';').map(part => part.trim()).find(part => part.startsWith('workwise_session='))?.slice('workwise_session='.length);
-  const userId = token && sessions.get(token);
-  return database.users.find(user => user.id === userId) || null;
+  if (!token) return null;
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+  const session = database.sessions.find(item => item.tokenHash === tokenHash);
+  if (!session || (session.expiresAt && session.expiresAt <= Date.now())) return null;
+  return database.users.find(user => user.id === session.userId) || null;
 }
 
-function establishSession(user, response) {
+function establishSession(user, response, rememberMe = false) {
   const token = crypto.randomBytes(32).toString('hex');
-  sessions.set(token, user.id);
-  response.setHeader('Set-Cookie', `workwise_session=${token}; ${cookieOptions()}`);
+  const sessionLifetime = rememberMe ? 30 * 24 * 60 * 60 : 8 * 60 * 60;
+  const cookieMaxAge = rememberMe ? sessionLifetime : null;
+  database.sessions = database.sessions.filter(item => !item.expiresAt || item.expiresAt > Date.now());
+  database.sessions.push({ tokenHash: crypto.createHash('sha256').update(token).digest('hex'), userId: user.id, expiresAt: Date.now() + sessionLifetime * 1000 });
+  saveDatabase();
+  response.setHeader('Set-Cookie', `workwise_session=${token}; ${cookieOptions(cookieMaxAge)}`);
 }
 
 function passwordRecord(password, salt = crypto.randomBytes(16).toString('hex')) {
@@ -96,6 +104,35 @@ function passwordRecord(password, salt = crypto.randomBytes(16).toString('hex'))
 async function passwordMatches(password, record) {
   const derived = await passwordRecord(password, record.salt);
   return crypto.timingSafeEqual(Buffer.from(derived.hash, 'hex'), Buffer.from(record.hash, 'hex'));
+}
+
+function getOrCreateConversation(participantIds, details = {}) {
+  const uniqueParticipantIds = [...new Set(participantIds)];
+  const existing = database.conversations.find(conversation => {
+    if (details.applicationId) return conversation.applicationId === details.applicationId;
+    return conversation.kind === details.kind && String(conversation.jobId || '') === String(details.jobId || '') && uniqueParticipantIds.every(id => conversation.participantIds.includes(id)) && conversation.participantIds.length === uniqueParticipantIds.length;
+  });
+  if (existing) return existing;
+  const conversation = {
+    id: crypto.randomUUID(), participantIds: uniqueParticipantIds,
+    kind: details.kind || 'application', jobId: details.jobId || null,
+    applicationId: details.applicationId || null, status: details.status || 'open',
+    createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), messages: []
+  };
+  database.conversations.push(conversation);
+  return conversation;
+}
+
+function describeConversation(conversation, viewerId) {
+  const peer = database.users.find(user => conversation.participantIds.find(id => id !== viewerId) === user.id);
+  const job = database.jobs.find(item => String(item.id) === String(conversation.jobId));
+  const lastMessage = conversation.messages[conversation.messages.length - 1] || null;
+  return {
+    id: conversation.id, kind: conversation.kind, status: conversation.status,
+    jobId: conversation.jobId, jobTitle: job?.title || 'Direct message',
+    peer: peer ? { id: peer.id, name: peer.name, role: peer.role } : { id: '', name: 'Workwise member', role: 'member' },
+    messages: conversation.messages, lastMessage
+  };
 }
 
 async function handleApi(request, response, url) {
@@ -119,7 +156,7 @@ async function handleApi(request, response, url) {
     if (database.users.some(item => item.email === email)) return sendJson(response, 409, { error: 'An account with that email already exists. Sign in instead.' });
     const credentials = await passwordRecord(password);
     const created = { id: crypto.randomUUID(), email, name: String(body.name || email.split('@')[0]), role, ...credentials, createdAt: new Date().toISOString() };
-    database.users.push(created); saveDatabase(); establishSession(created, response);
+    database.users.push(created); saveDatabase(); establishSession(created, response, Boolean(body.rememberMe));
     return sendJson(response, 201, { id: created.id, email: created.email, name: created.name, role: created.role });
   }
 
@@ -129,14 +166,18 @@ async function handleApi(request, response, url) {
     const found = database.users.find(item => item.email === email);
     if (!found || !(await passwordMatches(String(body.password || ''), found))) return sendJson(response, 401, { error: 'Email or password is incorrect.' });
     if (body.role && found.role !== body.role) return sendJson(response, 403, { error: `This account is registered as ${found.role}.` });
-    establishSession(found, response);
+    establishSession(found, response, Boolean(body.rememberMe));
     return sendJson(response, 200, { id: found.id, email: found.email, name: found.name, role: found.role });
   }
 
   if (method === 'POST' && pathname === '/api/auth/logout') {
     const cookie = request.headers.cookie || '';
     const token = cookie.split(';').map(part => part.trim()).find(part => part.startsWith('workwise_session='))?.slice('workwise_session='.length);
-    if (token) sessions.delete(token);
+    if (token) {
+      const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+      database.sessions = database.sessions.filter(item => item.tokenHash !== tokenHash);
+      saveDatabase();
+    }
     response.setHeader('Set-Cookie', `workwise_session=; ${cookieOptions()}; Max-Age=0`);
     return sendJson(response, 200, { ok: true });
   }
@@ -204,7 +245,7 @@ async function handleApi(request, response, url) {
     if (database.users.some(item => item.email === email)) return sendJson(response, 409, { error: 'That email is already in use.' });
     const credentials = await passwordRecord(password);
     const admin = { id: crypto.randomUUID(), email, name: 'Administrator', role: 'admin', ...credentials, createdAt: new Date().toISOString() };
-    database.users.push(admin); saveDatabase(); establishSession(admin, response);
+    database.users.push(admin); saveDatabase(); establishSession(admin, response, Boolean(body.rememberMe));
     return sendJson(response, 201, { id: admin.id, email: admin.email, name: admin.name, role: admin.role });
   }
 
@@ -229,7 +270,59 @@ async function handleApi(request, response, url) {
   if (method === 'GET' && pathname === '/api/employer/applications') {
     if (!requireRole('employer')) return;
     const owned = new Set(database.jobs.filter(job => job.ownerId === user.id).map(job => job.id));
-    return sendJson(response, 200, database.applications.filter(application => owned.has(application.jobId)).map(({ attachments, ...application }) => ({ ...application, attachments: Object.fromEntries(Object.entries(attachments || {}).map(([kind, value]) => [kind, value.originalName])) })));
+    return sendJson(response, 200, database.applications.filter(application => owned.has(application.jobId)).map(({ attachments, ...application }) => ({ ...application, conversationId: database.conversations.find(item => item.applicationId === application.id)?.id || null, status: application.status || 'pending', attachments: Object.fromEntries(Object.entries(attachments || {}).map(([kind, value]) => [kind, value.originalName])) })));
+  }
+
+  if (method === 'POST' && pathname.startsWith('/api/employer/applications/') && pathname.endsWith('/accept')) {
+    if (!requireRole('employer')) return;
+    if (user.role !== 'employer') return sendJson(response, 403, { error: 'Only the employer who posted the job can accept a proposal.' });
+    const applicationId = pathname.slice('/api/employer/applications/'.length, -'/accept'.length);
+    const application = database.applications.find(item => item.id === applicationId);
+    const job = application && database.jobs.find(item => String(item.id) === String(application.jobId));
+    if (!application || !job || job.ownerId !== user.id) return sendJson(response, 404, { error: 'Proposal not found for your jobs.' });
+    application.status = 'accepted';
+    application.acceptedAt ||= new Date().toISOString();
+    const conversation = getOrCreateConversation([user.id, application.applicantId], { kind: 'application', jobId: job.id, applicationId: application.id, status: 'accepted' });
+    conversation.status = 'accepted';
+    saveDatabase();
+    return sendJson(response, 200, { status: application.status, conversationId: conversation.id, conversation: describeConversation(conversation, user.id) });
+  }
+
+  if (method === 'POST' && pathname === '/api/admin/conversations') {
+    if (!requireRole('admin')) return;
+    const body = await readJson(request, 10_000);
+    const recipient = database.users.find(item => item.id === body.recipientId && item.role === 'employer');
+    const job = database.jobs.find(item => String(item.id) === String(body.jobId) && item.ownerId === recipient?.id);
+    if (!recipient || !job) return sendJson(response, 404, { error: 'The hirer or project could not be found.' });
+    const conversation = getOrCreateConversation([user.id, recipient.id], { kind: 'admin-hirer', jobId: job.id, status: 'open' });
+    saveDatabase();
+    return sendJson(response, 201, describeConversation(conversation, user.id));
+  }
+
+  if (method === 'GET' && pathname === '/api/conversations') {
+    if (!user) return sendJson(response, 401, { error: 'Sign in to view your messages.' });
+    const conversations = database.conversations.filter(item => item.participantIds.includes(user.id)).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    return sendJson(response, 200, conversations.map(item => describeConversation(item, user.id)));
+  }
+
+  if (pathname.startsWith('/api/conversations/')) {
+    if (!user) return sendJson(response, 401, { error: 'Sign in to view your messages.' });
+    const parts = pathname.split('/').filter(Boolean);
+    const conversationId = parts[2];
+    const conversation = database.conversations.find(item => item.id === conversationId);
+    if (!conversation || !conversation.participantIds.includes(user.id)) return sendJson(response, 404, { error: 'Conversation not found.' });
+    if (method === 'GET' && parts.length === 3) return sendJson(response, 200, describeConversation(conversation, user.id));
+    if (method === 'POST' && parts[3] === 'messages') {
+      if (conversation.kind === 'application' && conversation.status !== 'accepted') return sendJson(response, 403, { error: 'Messaging opens when the employer accepts the proposal.' });
+      const body = await readJson(request, 10_000);
+      const message = String(body.message || '').trim();
+      if (!message || message.length > 4000) return sendJson(response, 400, { error: 'Enter a message of 1 to 4,000 characters.' });
+      const saved = { id: crypto.randomUUID(), senderId: user.id, senderName: user.name, text: message, sentAt: new Date().toISOString() };
+      conversation.messages.push(saved);
+      conversation.updatedAt = saved.sentAt;
+      saveDatabase();
+      return sendJson(response, 201, saved);
+    }
   }
 
   if (method === 'GET' && pathname === '/api/admin/applications') {
@@ -239,7 +332,9 @@ async function handleApi(request, response, url) {
 
   if (method === 'GET' && pathname === '/api/admin/jobs') {
     if (!requireRole('admin')) return;
-    return sendJson(response, 200, database.jobs);
+    return sendJson(response, 200, database.jobs
+      .filter(job => job.status !== 'removed')
+      .map(job => ({ ...job, ownerRole: database.users.find(item => item.id === job.ownerId)?.role || null })));
   }
 
   if (method === 'POST' && pathname === '/api/admin/seed-jobs') {
@@ -261,14 +356,30 @@ async function handleApi(request, response, url) {
     const id = pathname.slice('/api/admin/jobs/'.length);
     const index = database.jobs.findIndex(job => String(job.id) === id);
     if (index < 0) return sendJson(response, 404, { error: 'Job not found.' });
-    if (method === 'DELETE') { if (database.jobs[index].kind === 'seed') database.jobs[index].status = 'removed'; else database.jobs.splice(index, 1); saveDatabase(); return sendJson(response, 200, { ok: true }); }
-    if (method === 'PATCH') { const body = await readJson(request, 80_000); database.jobs[index] = { ...database.jobs[index], ...body, id }; saveDatabase(); return sendJson(response, 200, database.jobs[index]); }
+    if (method === 'DELETE') {
+      if (database.jobs[index].kind === 'seed') {
+        database.jobs[index].status = 'removed';
+      } else {
+        database.jobs.splice(index, 1);
+      }
+      saveDatabase();
+      return sendJson(response, 200, { ok: true, removed: true });
+    }
+    if (method === 'PATCH') {
+      const body = await readJson(request, 80_000);
+      database.jobs[index] = { ...database.jobs[index], ...body, id };
+      if (body.status === 'published' || !body.status) {
+        database.jobs[index].status = 'published';
+      }
+      saveDatabase();
+      return sendJson(response, 200, database.jobs[index]);
+    }
   }
 
   if (method === 'POST' && pathname === '/api/applications') {
     if (!requireRole('freelancer')) return;
     const body = await readJson(request, 20 * 1024 * 1024);
-    let job = database.jobs.find(item => item.id === String(body.jobId));
+    let job = database.jobs.find(item => String(item.id) === String(body.jobId));
     if (!job && body.jobTitle) job = { id: String(body.jobId), title: String(body.jobTitle), client: String(body.client || 'Workwise marketplace'), ownerId: null };
     if (!job) return sendJson(response, 404, { error: 'This job is no longer available for applications.' });
     if (job.ownerId && job.ownerId === user.id) return sendJson(response, 400, { error: 'You cannot apply to your own job.' });
@@ -284,7 +395,7 @@ async function handleApi(request, response, url) {
       attachments[kind] = { filename, originalName: path.basename(attachment.name), contentType: String(attachment.type || 'application/octet-stream') };
     }
     if (!attachments.resume) return sendJson(response, 400, { error: 'Attach a CV or resume before applying.' });
-    const application = { id: crypto.randomUUID(), jobId: job.id, jobTitle: job.title, applicantId: user.id, applicantName: user.name, email: user.email, rate: String(body.rate || ''), availability: String(body.availability || ''), coverLetter: String(body.coverLetter || '').slice(0, 3000), attachments, submittedAt: new Date().toISOString() };
+    const application = { id: crypto.randomUUID(), jobId: job.id, jobTitle: job.title, applicantId: user.id, applicantName: user.name, email: user.email, rate: String(body.rate || ''), availability: String(body.availability || ''), coverLetter: String(body.coverLetter || '').slice(0, 3000), attachments, status: 'pending', submittedAt: new Date().toISOString() };
     database.applications.push(application); saveDatabase();
     return sendJson(response, 201, { id: application.id, jobTitle: application.jobTitle, submittedAt: application.submittedAt });
   }

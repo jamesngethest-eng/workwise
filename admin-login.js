@@ -46,7 +46,7 @@ loginForm.addEventListener('submit',async event=>{
   try{
     const response=await fetch(setupMode?'/api/admin/setup':'/api/auth/login',{
       method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({email:emailInput.value.trim(),password:passwordInput.value,role:'admin',setupKey:document.getElementById('adminSetupKey')?.value})
+      body:JSON.stringify({email:emailInput.value.trim(),password:passwordInput.value,role:'admin',setupKey:document.getElementById('adminSetupKey')?.value,rememberMe:document.getElementById('rememberAdmin').checked})
     });
     const result=await response.json();
     if(!response.ok)throw new Error(result.error||'Sign-in failed.');

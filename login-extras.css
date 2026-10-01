@@ -1,0 +1,2 @@
+.login-box form>label.remember-admin{display:flex;flex-direction:row;align-items:center;gap:8px;color:#68748e;font-size:10px;font-weight:500}
+.login-box .remember-admin input{width:14px;height:14px;padding:0;accent-color:#5969dc}
