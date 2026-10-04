@@ -21,3 +21,19 @@ services:
         value: .workwise-data
       - key: WORKWISE_ADMIN_SETUP_KEY
         sync: false
+      # --- Plans: everything is free until this date, then the Free plan limits apply ---
+      # Set it to a date ~2 months from launch, e.g. 2026-12-05. (If unset, the 2-month
+      # countdown restarts whenever the free tier wipes its storage.)
+      - key: BILLING_START_DATE
+        sync: false
+      - key: BILLING_CURRENCY
+        value: USD
+      - key: PAYMENT_INSTRUCTIONS
+        sync: false
+      # --- Account-recovery emails (Render's free tier blocks SMTP, so use Brevo over HTTPS) ---
+      - key: BREVO_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: MAIL_FROM_NAME
+        value: Workwise

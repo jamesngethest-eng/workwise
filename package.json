@@ -4,7 +4,7 @@
   "private": true,
   "description": "Workwise freelance marketplace demo",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.13"
   },
   "scripts": {
     "start": "node server.js",

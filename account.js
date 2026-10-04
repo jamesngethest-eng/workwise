@@ -6,13 +6,14 @@ const loginForm=document.getElementById('loginForm');
 const roleOptions=[...document.querySelectorAll('.role-option')];
 
 function setRole(role){selectedRole=role;roleOptions.forEach(button=>button.classList.toggle('active',button.dataset.role===role))}
-function hideAccountViews(){loginPage.hidden=true;employerPage.hidden=true;document.getElementById('communityPage').hidden=true;document.querySelector('.welcome').hidden=true;document.querySelector('.search-panel').hidden=true;document.querySelector('.content-grid').hidden=true}
+function hideAccountViews(){document.getElementById('plansPage').hidden=true;document.getElementById('plansNav').classList.remove('active');loginPage.hidden=true;employerPage.hidden=true;document.getElementById('communityPage').hidden=true;document.querySelector('.welcome').hidden=true;document.querySelector('.search-panel').hidden=true;document.querySelector('.content-grid').hidden=true}
 function showLogin(role=selectedRole){hideAccountViews();setRole(role);loginPage.hidden=false;document.getElementById('communityNav').classList.remove('active');document.getElementById('savedNav').classList.remove('active');document.querySelector('.nav-link:first-child').classList.remove('active');document.getElementById('hireNav').classList.toggle('active',role==='employer')}
 function showFreelancerArea(user){hideAccountViews();document.querySelector('.welcome').hidden=false;document.querySelector('.search-panel').hidden=false;document.querySelector('.content-grid').hidden=false;document.querySelector('.nav-link:first-child').classList.add('active');document.getElementById('communityNav').classList.remove('active');document.getElementById('hireNav').classList.remove('active');const name=user?.name||localStorage.getItem('workwise-user-name')||'Jamie Davis';const initials=name.split(/\s+/).slice(0,2).map(part=>part[0]).join('').toUpperCase()||'JD';localStorage.setItem('workwise-user-name',name);localStorage.setItem('workwise-user-initials',initials);document.getElementById('accountName').textContent=name;document.querySelector('#accountButton .avatar').textContent=initials;document.querySelector('.mini-profile strong').textContent=name;document.querySelector('.avatar.large').textContent=initials;apiRequest('/api/profile').then(renderProfile).catch(()=>{})}
 function renderProfile(profileData){const name=profileData.name||'Workwise member';const profile=profileData.profile||{};const initials=name.split(/\s+/).slice(0,2).map(part=>part[0]).join('').toUpperCase()||'WM';document.getElementById('accountName').textContent=name;document.querySelector('#accountButton .avatar').textContent=initials;document.getElementById('profileAvatar').textContent=initials;document.getElementById('profileDisplayName').textContent=name;document.getElementById('profileDisplayTitle').textContent=profile.title||'Add a professional title';const location=document.getElementById('profileDisplayLocation');location.textContent=profile.location||'';location.hidden=!profile.location;const portfolio=document.getElementById('profilePortfolioPreview');portfolio.href=profile.portfolioUrl||'#';portfolio.hidden=!profile.portfolioUrl;const bio=document.getElementById('profileBioPreview');bio.textContent=profile.bio||'';bio.hidden=!profile.bio;const tags=document.getElementById('profileSkillPreview');tags.replaceChildren();(profile.skills||[]).forEach(skill=>{const tag=document.createElement('span');tag.textContent=skill;tags.append(tag)});const strength=Math.min(100,(name?10:0)+(profile.title?20:0)+(profile.location?10:0)+(profile.bio?25:0)+(profile.skills?.length?25:0)+(profile.portfolioUrl?10:0));document.getElementById('profileStrength').textContent=`${strength}%`;document.getElementById('profileTopStrength').textContent=`${strength}%`;document.getElementById('profileProgressBar').style.width=`${strength}%`;localStorage.setItem('workwise-user-name',name);localStorage.setItem('workwise-user-initials',initials)}
-async function openProfileEditor(){try{const data=await apiRequest('/api/profile');const profile=data.profile||{};document.getElementById('profileNameInput').value=data.name||'';document.getElementById('profileTitleInput').value=profile.title||'';document.getElementById('profileLocationInput').value=profile.location||'';document.getElementById('profileBioInput').value=profile.bio||'';document.getElementById('profileSkillsInput').value=(profile.skills||[]).join(', ');document.getElementById('profilePortfolioInput').value=profile.portfolioUrl||'';showProfileError('');document.getElementById('profileDialog').showModal()}catch(error){if(error.message.includes('Sign in'))showLogin(selectedRole);else showToast(error.message)}}
+async function openProfileEditor(){try{const data=await apiRequest('/api/profile');try{document.getElementById('privacyShowEmail').checked=(await apiRequest('/api/privacy')).showEmail}catch{}const profile=data.profile||{};document.getElementById('profileNameInput').value=data.name||'';document.getElementById('profileTitleInput').value=profile.title||'';document.getElementById('profileLocationInput').value=profile.location||'';document.getElementById('profileBioInput').value=profile.bio||'';document.getElementById('profileSkillsInput').value=(profile.skills||[]).join(', ');document.getElementById('profilePortfolioInput').value=profile.portfolioUrl||'';showProfileError('');document.getElementById('profileDialog').showModal()}catch(error){if(error.message.includes('Sign in'))showLogin(selectedRole);else showToast(error.message)}}
 function showProfileError(message){const node=document.getElementById('profileFormError');node.textContent=message||'';node.hidden=!message}
 function setHeaderAuth(user){
+  updateBillingBanner(user);
   const nav=document.querySelector('.main-nav');let adminLink=document.getElementById('adminNav');
   if(user?.role==='admin'){if(!adminLink){adminLink=document.createElement('a');adminLink.id='adminNav';adminLink.className='nav-link';adminLink.href='admin.html';adminLink.textContent='Admin dashboard';nav.append(adminLink)}}else adminLink?.remove();const button=document.getElementById('headerAuthButton');button.textContent=user?'Sign out':'Sign in';button.dataset.signedIn=user?'true':'false';if(user?.role==='freelancer'||user?.role==='employer')selectedRole=user.role}
 function showEmployerArea(user){hideAccountViews();employerPage.hidden=false;document.querySelectorAll('.nav-link').forEach(link=>link.classList.remove('active'));document.getElementById('hireNav').classList.add('active');if(user){localStorage.setItem('workwise-user-name',user.name);localStorage.setItem('workwise-user-initials',user.name.split(/\s+/).slice(0,2).map(part=>part[0]).join('').toUpperCase())}document.getElementById('accountName').textContent=localStorage.getItem('workwise-user-name')||'Employer';document.querySelector('#accountButton .avatar').textContent=localStorage.getItem('workwise-user-initials')||'EM';renderPostedJobs();apiRequest('/api/profile').then(renderProfile).catch(()=>{})}
@@ -64,7 +65,7 @@ document.getElementById('hireNav').addEventListener('click',event=>{event.preven
 document.getElementById('accountButton').addEventListener('click',async()=>{try{const user=await apiRequest('/api/auth/me');if(user.role==='employer')showEmployerArea(user);else showFreelancerArea(user)}catch{showLogin(selectedRole)}});
 document.getElementById('headerAuthButton').addEventListener('click',async()=>{if(document.getElementById('headerAuthButton').dataset.signedIn==='true'){try{await apiRequest('/api/auth/logout',{method:'POST'});localStorage.removeItem('workwise-role');setHeaderAuth(null);showLogin(selectedRole)}catch(error){showToast(error.message)}}else showLogin(selectedRole)});
 document.getElementById('loginBack').addEventListener('click',()=>showFreelancerArea());
-document.getElementById('forgotPassword').addEventListener('click',event=>{event.preventDefault();showToast('Contact your Workwise administrator to reset a password.')});
+document.getElementById('forgotPassword').addEventListener('click',event=>{event.preventDefault();openRecovery()});
 loginForm.addEventListener('submit',async event=>{event.preventDefault();if(!loginForm.reportValidity())return;const submit=document.getElementById('accountSubmit');submit.disabled=true;showAccountError('');try{const registering=accountMode==='register';const body={email:document.getElementById('loginEmail').value.trim(),password:document.getElementById('loginPassword').value,role:selectedRole,rememberMe:document.getElementById('rememberAccount').checked};if(registering)body.name=document.getElementById('loginName').value.trim();const user=await apiRequest(registering?'/api/auth/register':'/api/auth/login',{method:'POST',body:JSON.stringify(body)});localStorage.setItem('workwise-role',user.role);setHeaderAuth(user);if(user.role==='employer')showEmployerArea(user);else showFreelancerArea(user)}catch(error){showAccountError(error.message)}finally{submit.disabled=false}});
 document.getElementById('switchRole').addEventListener('click',async()=>{try{await apiRequest('/api/auth/logout',{method:'POST'});localStorage.removeItem('workwise-role');setHeaderAuth(null);showLogin('freelancer')}catch{showToast('Could not sign out. Please try again.')}});
 document.getElementById('postJobForm').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;if(!form.reportValidity())return;const submitBtn=form.querySelector('button[type=submit]');if(submitBtn.disabled)return;const job={title:document.getElementById('postTitle').value.trim(),category:document.getElementById('postCategory').value,level:document.getElementById('postLevel').value,description:document.getElementById('postDescription').value.trim(),type:document.getElementById('postType').value,budget:document.getElementById('postBudget').value.trim(),tags:[document.getElementById('postCategory').value]};submitBtn.disabled=true;try{await apiRequest('/api/jobs',{method:'POST',body:JSON.stringify(job)});form.reset();await refreshMarketplaceJobs();await renderPostedJobs();showToast('Your job has been published')}catch(error){showToast(error.message)}finally{submitBtn.disabled=false}});
@@ -99,3 +100,98 @@ document.querySelectorAll('[data-jump]').forEach(link=>link.addEventListener('cl
   else if(target==='browse')showHome();
   else document.getElementById(target)?.scrollIntoView({behavior:'smooth',block:'start'})
 }));
+
+// ================= password recovery (code by email) =================
+const recoverDialog=document.getElementById('recoverDialog');
+let recoverStep=1;
+function recoverMessage(text,good){const box=document.getElementById('recoverMessage');box.hidden=!text;box.textContent=text||'';box.classList.toggle('good',Boolean(good))}
+function openRecovery(){recoverStep=1;document.getElementById('recoverStep2').hidden=true;document.getElementById('recoverEmail').readOnly=false;document.getElementById('recoverEmail').value=document.getElementById('loginEmail').value;document.getElementById('recoverCode').value='';document.getElementById('recoverPassword').value='';document.getElementById('recoverSubmit').textContent='Send code';document.getElementById('recoverHelp').textContent='Enter the email you signed up with and we will email you a 6-digit code.';recoverMessage('');recoverDialog.showModal()}
+document.getElementById('closeRecover').addEventListener('click',()=>recoverDialog.close());
+document.getElementById('recoverCancel').addEventListener('click',()=>recoverDialog.close());
+document.getElementById('recoverForm').addEventListener('submit',async event=>{
+  event.preventDefault();const submit=document.getElementById('recoverSubmit');if(submit.disabled)return;submit.disabled=true;
+  const email=document.getElementById('recoverEmail').value.trim();
+  try{
+    if(recoverStep===1){
+      const result=await apiRequest('/api/auth/forgot',{method:'POST',body:JSON.stringify({email})});
+      recoverStep=2;document.getElementById('recoverStep2').hidden=false;document.getElementById('recoverEmail').readOnly=true;submit.textContent='Reset password';
+      document.getElementById('recoverHelp').textContent='Check your inbox (and spam folder) for the 6-digit code.';recoverMessage(result.message,true);document.getElementById('recoverCode').focus()
+    }else{
+      const result=await apiRequest('/api/auth/reset',{method:'POST',body:JSON.stringify({email,code:document.getElementById('recoverCode').value.trim(),newPassword:document.getElementById('recoverPassword').value})});
+      recoverDialog.close();document.getElementById('loginEmail').value=email;document.getElementById('loginPassword').value='';showToast(result.message)
+    }
+  }catch(error){recoverMessage(error.message,false)}finally{submit.disabled=false}
+});
+
+// ================= plans & billing =================
+const plansPage=document.getElementById('plansPage');
+const fmtDate=iso=>new Date(iso).toLocaleDateString([],{year:'numeric',month:'long',day:'numeric'});
+const planMoney=(plan,months=1)=>`${plan.currency} ${(plan.price*months).toLocaleString()}`;
+function el(tag,className,text){const node=document.createElement(tag);if(className)node.className=className;if(text!==undefined)node.textContent=text;return node}
+async function updateBillingBanner(user){
+  const banner=document.getElementById('billingBanner');
+  if(!user||user.role==='admin'){banner.hidden=true;return}
+  try{
+    const {status}=await apiRequest('/api/billing');let text='';
+    if(status.state==='trial')text=`Free period: ${status.daysLeft} day${status.daysLeft===1?'':'s'} left. Paid plans start on ${fmtDate(status.billingStartsAt)}.`;
+    else if(status.state==='free')text=status.expired?'Your plan has ended. You are on the Free plan with limits.':'You are on the Free plan. Upgrade for unlimited use.';
+    else if(status.state==='active'&&status.daysLeft<=7)text=`Your ${status.planName} plan ends in ${status.daysLeft} day${status.daysLeft===1?'':'s'}.`;
+    document.getElementById('billingBannerText').textContent=text;banner.hidden=!text
+  }catch{banner.hidden=true}
+}
+async function renderPlans(){
+  let data;
+  try{data=await apiRequest('/api/billing')}catch{const pub=await apiRequest('/api/billing/plans');data={status:{state:'public',billingStartsAt:pub.billingStartsAt},plans:pub.plans,freeLimits:pub.freeLimits,payments:[],instructions:''}}
+  const {status,plans,freeLimits}=data;const signedIn=status.state!=='public';
+  document.getElementById('plansIntro').textContent=status.state==='trial'||status.state==='public'&&new Date(status.billingStartsAt)>new Date()?`Everything is free until ${fmtDate(status.billingStartsAt)}. After that you can keep using the Free plan or upgrade.`:'Choose the plan that fits you.';
+  const box=document.getElementById('planStatus');box.replaceChildren();
+  const line=text=>{box.append(el('p','',text))};
+  if(status.state==='trial')line(`You are in your free period: ${status.daysLeft} day${status.daysLeft===1?'':'s'} left (until ${fmtDate(status.billingStartsAt)}). Everything is unlimited until then.`);
+  else if(status.state==='active')line(`${status.planName} is active until ${fmtDate(status.expiresAt)} (${status.daysLeft} days left).`);
+  else if(status.state==='free'){line(status.expired?'Your paid plan has ended. You are on the Free plan.':'You are on the Free plan.');const roleUsage=window.workwiseCurrentUser?.role==='employer'?`Active jobs: ${status.usage.activeJobs} of ${freeLimits.activeJobs}`:`Proposals this month: ${status.usage.proposalsThisMonth} of ${freeLimits.proposalsPerMonth}`;line(roleUsage)}
+  else if(status.state==='exempt')line('Admin accounts do not need a plan.');
+  else line('Sign in to see your plan and subscribe.');
+  const grid=document.getElementById('planGrid');grid.replaceChildren();
+  const freeCard=el('article','plan-card');freeCard.append(el('h3','','Free'),el('p','plan-price','0'),el('ul','plan-features'));
+  [`Hirers: ${freeLimits.activeJobs} active job post`,`Freelancers: ${freeLimits.proposalsPerMonth} proposals per month`,'Messaging and attachments included','Full privacy controls'].forEach(f=>freeCard.querySelector('ul').append(el('li','',f)));grid.append(freeCard);
+  plans.forEach(plan=>{
+    const card=el('article','plan-card featured');card.append(el('h3','',plan.name),el('p','plan-price',`${planMoney(plan)} / month`));const list=el('ul','plan-features');plan.features.forEach(f=>list.append(el('li','',f)));card.append(list);
+    const choose=el('button','primary-btn',signedIn?'Choose this plan':'Sign in to subscribe');choose.type='button';
+    choose.addEventListener('click',()=>{if(!signedIn){showLogin();return}document.getElementById('payPlan').value=plan.id;document.getElementById('payCard').scrollIntoView({behavior:'smooth'});document.getElementById('payReference').focus()});
+    card.append(choose);grid.append(card)
+  });
+  const payCard=document.getElementById('payCard');payCard.hidden=!(signedIn&&status.state!=='exempt'&&plans.length);
+  document.getElementById('payInstructions').textContent=data.instructions||'';
+  const select=document.getElementById('payPlan');select.replaceChildren();plans.forEach(plan=>{const option=el('option','',`${plan.name} · ${planMoney(plan)} / month`);option.value=plan.id;select.append(option)});
+  const paymentsCard=document.getElementById('paymentsCard'),list=document.getElementById('paymentList');list.replaceChildren();paymentsCard.hidden=!data.payments.length;
+  data.payments.forEach(p=>{const row=el('div','payment-row');row.append(el('strong','',`${p.planName} · ${p.months} month${p.months>1?'s':''} · ${p.currency} ${p.amount.toLocaleString()}`),el('span',`payment-status ${p.status}`,p.status),el('small','',`Ref ${p.reference} · ${fmtDate(p.createdAt)}`));list.append(row)})
+}
+async function showPlans(){
+  try{window.workwiseCurrentUser=await apiRequest('/api/auth/me')}catch{window.workwiseCurrentUser=null}
+  hideAccountViews();plansPage.hidden=false;document.querySelectorAll('.nav-link').forEach(link=>link.classList.remove('active'));document.getElementById('plansNav').classList.add('active');window.scrollTo(0,0);
+  try{await renderPlans()}catch(error){showToast(error.message)}
+}
+document.getElementById('plansNav').addEventListener('click',event=>{event.preventDefault();showPlans()});
+document.getElementById('billingBannerLink').addEventListener('click',event=>{event.preventDefault();showPlans()});
+document.getElementById('payForm').addEventListener('submit',async event=>{
+  event.preventDefault();const button=document.getElementById('paySubmit');if(button.disabled)return;button.disabled=true;
+  try{await apiRequest('/api/billing/payments',{method:'POST',body:JSON.stringify({planId:document.getElementById('payPlan').value,months:Number(document.getElementById('payMonths').value),reference:document.getElementById('payReference').value.trim()})});
+    document.getElementById('payReference').value='';showToast('Payment submitted. The administrator will confirm it shortly.');await renderPlans()}
+  catch(error){showToast(error.message)}finally{button.disabled=false}
+});
+
+// ================= privacy controls =================
+document.getElementById('privacyShowEmail').addEventListener('change',async event=>{
+  try{await apiRequest('/api/privacy',{method:'PATCH',body:JSON.stringify({showEmail:event.target.checked})});showToast(event.target.checked?'Hirers can now see your email.':'Your email is hidden from hirers.')}
+  catch(error){event.target.checked=!event.target.checked;showToast(error.message)}
+});
+document.getElementById('exportData').addEventListener('click',async()=>{
+  try{const response=await fetch('/api/account/export',{credentials:'same-origin'});if(!response.ok)throw new Error('Could not export your data.');
+    const link=document.createElement('a');link.href=URL.createObjectURL(await response.blob());link.download='workwise-my-data.json';document.body.append(link);link.click();link.remove()}
+  catch(error){showToast(error.message)}
+});
+document.getElementById('deleteAccount').addEventListener('click',async()=>{
+  const password=prompt('This permanently deletes your account, jobs, proposals, messages and files.\n\nType your password to confirm:');if(!password)return;
+  try{await apiRequest('/api/account',{method:'DELETE',body:JSON.stringify({password})});document.getElementById('profileDialog').close?.();showToast('Your account has been deleted.');setTimeout(()=>window.location.reload(),1200)}
+  catch(error){showToast(error.message)}
+});

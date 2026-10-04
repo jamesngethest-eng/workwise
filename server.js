@@ -13,6 +13,19 @@ fs.mkdirSync(uploadDir, { recursive: true });
 let database = loadDatabase();
 database.sessions ||= [];
 database.conversations ||= [];
+database.payments ||= [];
+if (database.jobs.some(job => job.kind === 'seed')) { database.jobs = database.jobs.filter(job => job.kind !== 'seed'); }
+database.messageFiles ||= {};
+const guard = require('./lib/guard');
+const mailer = require('./lib/mailer');
+const billing = require('./lib/billing');
+const privacy = require('./lib/privacy');
+const files = require('./lib/files');
+const recovery = require('./lib/recovery');
+const sql = require('./lib/sql').open(dataDir);
+guard.init(sql);
+guard.computeInlineScriptHashes(root);
+billing.ensureStart(database, saveDatabase);
 const types = {
   '.css': 'text/css; charset=utf-8',
   '.html': 'text/html; charset=utf-8',
@@ -152,6 +165,13 @@ async function handleApi(request, response, url) {
 
   if (method === 'GET' && pathname === '/api/health') return sendJson(response, 200, { ok: true });
 
+  const ctx = { request, response, url, pathname, method, user, database, saveDatabase, readJson, requireRole, uploadDir, sql, guard, mailer, passwordRecord, passwordMatches,
+    ip: guard.clientIp(request), send: (status, payload, headers) => sendJson(response, status, payload, headers) };
+  for (const module of [recovery, billing, privacy, files]) {
+    const handled = await module.handle(ctx);
+    if (handled !== false) return handled === undefined ? true : handled;
+  }
+
   if (method === 'POST' && pathname === '/api/auth/register') {
     const body = await readJson(request, 40_000);
     const email = String(body.email || '').trim().toLowerCase();
@@ -169,7 +189,11 @@ async function handleApi(request, response, url) {
     const body = await readJson(request, 40_000);
     const email = String(body.email || '').trim().toLowerCase();
     const found = database.users.find(item => item.email === email);
-    if (!found || !(await passwordMatches(String(body.password || ''), found))) return sendJson(response, 401, { error: 'Email or password is incorrect.' });
+    const loginIp = guard.clientIp(request);
+    const waitSeconds = guard.loginLocked(email, loginIp);
+    if (waitSeconds) return sendJson(response, 429, { error: `Too many failed sign-in attempts. Try again in ${Math.ceil(waitSeconds / 60)} minute(s), or reset your password.` }, { 'Retry-After': String(waitSeconds) });
+    if (!found || !(await passwordMatches(String(body.password || ''), found))) { guard.loginFailed(email, loginIp); return sendJson(response, 401, { error: 'Email or password is incorrect.' }); }
+    guard.loginOk(email, loginIp);
     if (body.role && found.role !== body.role) return sendJson(response, 403, { error: `This account is registered as ${found.role}.` });
     establishSession(found, response, Boolean(body.rememberMe));
     return sendJson(response, 200, { id: found.id, email: found.email, name: found.name, role: found.role });
@@ -255,7 +279,7 @@ async function handleApi(request, response, url) {
   }
 
   if (method === 'GET' && pathname === '/api/jobs') {
-    return sendJson(response, 200, database.jobs.filter(job => job.status === 'published'), { 'X-Workwise-Seeds-Initialized': String(Boolean(database.seedJobsInitialized)) });
+    return sendJson(response, 200, database.jobs.filter(job => job.status === 'published' && job.kind !== 'seed').map(({ ownerId, ...job }) => job), { 'X-Workwise-Seeds-Initialized': String(Boolean(database.seedJobsInitialized)) });
   }
 
   if (method === 'POST' && pathname === '/api/jobs') {
@@ -264,6 +288,8 @@ async function handleApi(request, response, url) {
     if (!String(body.title || '').trim() || !String(body.description || '').trim()) return sendJson(response, 400, { error: 'Job title and description are required.' });
     const duplicate = database.jobs.find(item => item.ownerId === user.id && item.title === String(body.title).trim() && item.description === String(body.description).trim() && Date.now() - Date.parse(item.createdAt) < 60_000);
     if (duplicate) return sendJson(response, 200, duplicate);
+    const jobLimit = user.role === 'employer' && billing.checkLimit(database, user, 'job');
+    if (jobLimit) return sendJson(response, 402, { error: jobLimit, upgrade: true });
     const job = { id: crypto.randomUUID(), ownerId: user.id, client: String(body.client || user.name), title: String(body.title).trim(), category: String(body.category || 'Design & Creative'), level: String(body.level || 'Intermediate'), description: String(body.description).trim(), type: body.type === 'Hourly' || body.type === 'hourly' ? 'Hourly' : 'Fixed price', budget: String(body.budget || '').trim(), tags: Array.isArray(body.tags) ? body.tags : [String(body.category || 'Design & Creative')], status: 'published', createdAt: new Date().toISOString() };
     database.jobs.push(job); saveDatabase();
     return sendJson(response, 201, job);
@@ -287,7 +313,7 @@ async function handleApi(request, response, url) {
   if (method === 'GET' && pathname === '/api/employer/applications') {
     if (!requireRole('employer')) return;
     const owned = new Set(database.jobs.filter(job => job.ownerId === user.id).map(job => job.id));
-    return sendJson(response, 200, database.applications.filter(application => owned.has(application.jobId)).map(({ attachments, ...application }) => ({ ...application, conversationId: database.conversations.find(item => item.applicationId === application.id)?.id || null, applicantProfile: profileSummary(application.applicantId), status: application.status || 'pending', attachments: Object.fromEntries(Object.entries(attachments || {}).map(([kind, value]) => [kind, value.originalName])) })));
+    return sendJson(response, 200, database.applications.filter(application => owned.has(application.jobId)).map(({ attachments, ...application }) => ({ ...application, conversationId: database.conversations.find(item => item.applicationId === application.id)?.id || null, email: privacy.showEmail(database, application.applicantId) ? application.email : '', applicantProfile: profileSummary(application.applicantId), status: application.status || 'pending', attachments: Object.fromEntries(Object.entries(attachments || {}).map(([kind, value]) => [kind, value.originalName])) })));
   }
 
   if (method === 'POST' && pathname.startsWith('/api/employer/applications/') && pathname.endsWith('/conversation')) {
@@ -355,15 +381,28 @@ async function handleApi(request, response, url) {
     if (!conversation || !conversation.participantIds.includes(user.id)) return sendJson(response, 404, { error: 'Conversation not found.' });
     if (method === 'GET' && parts.length === 3) return sendJson(response, 200, describeConversation(conversation, user.id));
     if (method === 'POST' && parts[3] === 'messages') {
-      const body = await readJson(request, 10_000);
+      const body = await readJson(request, 20_000);
       const message = String(body.message || '').trim();
-      if (!message || message.length > 4000) return sendJson(response, 400, { error: 'Enter a message of 1 to 4,000 characters.' });
-      const saved = { id: crypto.randomUUID(), senderId: user.id, senderName: user.name, text: message, sentAt: new Date().toISOString() };
+      const attachments = files.claim(database, conversation, user, body.attachments);
+      if ((!message && !attachments.length) || message.length > 4000) return sendJson(response, 400, { error: 'Enter a message of up to 4,000 characters, or attach a file.' });
+      const saved = { id: crypto.randomUUID(), senderId: user.id, senderName: user.name, text: message, sentAt: new Date().toISOString(), ...(attachments.length ? { attachments } : {}) };
       conversation.messages.push(saved);
       conversation.updatedAt = saved.sentAt;
       saveDatabase();
       return sendJson(response, 201, saved);
     }
+  }
+
+  if (method === 'GET' && pathname === '/api/admin/security') {
+    if (!requireRole('admin')) return;
+    return sendJson(response, 200, { ...guard.state(), mail: mailer.provider() || 'not configured' });
+  }
+
+  if (method === 'POST' && pathname === '/api/admin/security/unblock') {
+    if (!requireRole('admin')) return;
+    const body = await readJson(request, 2_000);
+    guard.unblock(String(body.ip || ''));
+    return sendJson(response, 200, { ok: true });
   }
 
   if (method === 'GET' && pathname === '/api/admin/applications') {
@@ -380,16 +419,7 @@ async function handleApi(request, response, url) {
 
   if (method === 'POST' && pathname === '/api/admin/seed-jobs') {
     if (!requireRole('admin')) return;
-    if (database.seedJobsInitialized) return sendJson(response, 200, { initialized: true });
-    const body = await readJson(request, 250_000);
-    if (!Array.isArray(body.jobs)) return sendJson(response, 400, { error: 'Seed jobs must be provided as a list.' });
-    for (const source of body.jobs) {
-      const id = Number(source.id);
-      if (!Number.isInteger(id) || id < 1 || database.jobs.some(job => String(job.id) === String(id))) continue;
-      database.jobs.push({ id, kind: 'seed', ownerId: null, client: String(source.client || 'Workwise client'), title: String(source.title || ''), category: String(source.category || 'Design & Creative'), level: String(source.level || 'Intermediate'), description: String(source.description || ''), type: source.type === 'hourly' ? 'Hourly' : 'Fixed price', budget: String(source.type === 'hourly' ? source.budgetText || source.budget || '' : source.budgetText || source.budget || ''), tags: Array.isArray(source.tags) ? source.tags : String(source.tags || '').split(',').map(tag => tag.trim()).filter(Boolean), status: 'published', duration: String(source.duration || 'Project duration TBD'), rating: String(source.rating || 'New client'), verified: Boolean(source.verified), proposals: String(source.proposals || '0'), createdAt: new Date().toISOString() });
-    }
-    database.seedJobsInitialized = true; saveDatabase();
-    return sendJson(response, 201, { initialized: true });
+    return sendJson(response, 200, { ok: true, ignored: 'Sample jobs are disabled; only real client jobs are shown.' });
   }
 
   if (pathname.startsWith('/api/admin/jobs/')) {
@@ -425,6 +455,8 @@ async function handleApi(request, response, url) {
     if (!job) return sendJson(response, 404, { error: 'This job is no longer available for applications.' });
     if (job.ownerId && job.ownerId === user.id) return sendJson(response, 400, { error: 'You cannot apply to your own job.' });
     if (!String(body.coverLetter || '').trim() || String(body.coverLetter).trim().length < 50) return sendJson(response, 400, { error: 'Please write a cover letter of at least 50 characters.' });
+    const proposalLimit = billing.checkLimit(database, user, 'proposal');
+    if (proposalLimit) return sendJson(response, 402, { error: proposalLimit, upgrade: true });
     const attachments = {};
     for (const kind of ['resume', 'coverPhoto']) {
       const attachment = body.attachments?.[kind];
@@ -460,6 +492,8 @@ async function handleApi(request, response, url) {
 }
 
 const server = http.createServer(async (request, response) => {
+  guard.applyHeaders(request, response);
+  if (guard.inspect(request, response)) return;
   let url;
   try { url = new URL(request.url, `http://${host}:${port}`); }
   catch { response.writeHead(400); response.end('Bad request'); return; }
@@ -496,6 +530,12 @@ const server = http.createServer(async (request, response) => {
   }
 
   const filePath = path.resolve(root, `.${pathname}`);
+  const ext = path.extname(filePath).toLowerCase();
+  if (!types[ext] || ext === '.json' || pathname.startsWith('/lib/') || ['server.js', 'start-server.js'].includes(path.basename(filePath))) {
+    response.writeHead(404);
+    response.end('Not found');
+    return;
+  }
   if (!filePath.startsWith(root + path.sep)) {
     response.writeHead(403);
     response.end('Forbidden');
@@ -522,6 +562,9 @@ const server = http.createServer(async (request, response) => {
     fs.createReadStream(filePath).pipe(response);
   });
 });
+
+server.headersTimeout = 30_000;
+server.requestTimeout = 10 * 60_000;
 
 server.on('error', error => {
   if (error.code === 'EADDRINUSE') {

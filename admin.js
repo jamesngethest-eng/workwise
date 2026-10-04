@@ -1,13 +1,4 @@
-const seedListings=[
- {id:1,title:'Product designer for a mindful finance app',client:'Northstar Studio',category:'Design & Creative',type:'hourly',budget:'$65 – $90 / hr',level:'Intermediate',tags:'Product Design, Figma, Mobile App, UX Research',description:'We’re reimagining the way people feel about money. Looking for a thoughtful product designer to help shape a calm, clear mobile experience from early concepts through handoff.'},
- {id:2,title:'Brand identity & packaging for a new coffee label',client:'Sunday Goods',category:'Design & Creative',type:'fixed',budget:'$2,500',level:'Expert',tags:'Brand Identity, Packaging, Illustrator, Print Design',description:'We’re building a modern specialty coffee brand rooted in slow mornings and good design. Need a full visual identity and packaging system for our first three products.'},
- {id:3,title:'UX audit and redesign for a telehealth platform',client:'Lumen Health',category:'Design & Creative',type:'hourly',budget:'$50 – $75 / hr',level:'Intermediate',tags:'UX Design, Healthcare, Figma, Accessibility',description:'Our patient portal needs a fresh perspective. Audit the existing desktop and mobile experience, identify friction points, and redesign the core appointment booking journey.'},
- {id:4,title:'Landing page design for a B2B SaaS launch',client:'Atlas Commerce',category:'Design & Creative',type:'fixed',budget:'$1,800',level:'Entry',tags:'Web Design, SaaS, Figma, Conversion',description:'We’re launching a new analytics product for independent retailers and need a conversion-focused landing page that makes a complex product feel simple.'},
- {id:5,title:'Design system specialist for a growing startup',client:'Fieldwork',category:'Design & Creative',type:'hourly',budget:'$70 – $100 / hr',level:'Expert',tags:'Design Systems, Figma, Components, Documentation',description:'Help us bring consistency to a fast-growing product. You’ll build out our component library, document usage patterns, and partner closely with engineering.'},
- {id:6,title:'Illustrator for a set of 12 wellness journal prompts',client:'Little Rituals',category:'Design & Creative',type:'fixed',budget:'$950',level:'Entry',tags:'Illustration, Procreate, Editorial, Wellness',description:'Looking for a warm, playful illustration style for a guided journaling product. We have a creative direction and references ready to share.'},
- {id:7,title:'Visual designer for a climate tech pitch deck',client:'Openlane',category:'Design & Creative',type:'fixed',budget:'$1,200',level:'Intermediate',tags:'Presentation Design, Climate Tech, Keynote',description:'We’re raising our seed round and need a polished 12-slide investor deck. Strong storytelling and clean data visualization skills are a must.'},
- {id:8,title:'Webflow developer to build a portfolio site',client:'Vela',category:'Development & IT',type:'hourly',budget:'$40 – $60 / hr',level:'Intermediate',tags:'Webflow, HTML, CSS, Responsive Design',description:'Designs are ready in Figma; looking for a detail-oriented Webflow developer to build a responsive portfolio website with a CMS-backed case study section.'}
-];
+const seedListings=[];
 const overridesKey='workwise-job-overrides',hiddenKey='workwise-hidden-jobs',employerKey='workwise-employer-jobs';let statusFilter='all';let editingKind='';let remoteJobs=[];
 const readStore=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key)||JSON.stringify(fallback))}catch{return fallback}};
 const readOverrides=()=>readStore(overridesKey,{});const readHidden=()=>new Set(readStore(hiddenKey,[]).map(Number));const readEmployer=()=>readStore(employerKey,[]);
@@ -49,6 +40,33 @@ document.getElementById('jobEditForm').addEventListener('submit',async event=>{
   }catch(error){toast(error.message)}
 });
 document.getElementById('addJobBtn').addEventListener('click',()=>openEditor('new',''));document.getElementById('closeDialog').addEventListener('click',()=>document.getElementById('editDialog').close());document.getElementById('cancelEdit').addEventListener('click',()=>document.getElementById('editDialog').close());document.getElementById('adminSearch').addEventListener('input',renderAdmin);document.getElementById('adminCategory').addEventListener('change',renderAdmin);document.querySelectorAll('.listing-tab').forEach(button=>button.addEventListener('click',()=>{document.querySelector('.listing-tab.active').classList.remove('active');button.classList.add('active');statusFilter=button.dataset.status;renderAdmin()}));
-async function initializeAdminJobs(){try{await fetch('/api/admin/seed-jobs',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({jobs:seedListings})});const response=await fetch('/api/admin/jobs',{credentials:'same-origin'});if(response.ok)remoteJobs=await response.json();else toast('Could not load listings. Please sign in again.')}catch{toast('Could not reach the server.')}renderAdmin();loadClients()}
+async function initializeAdminJobs(){try{const response=await fetch('/api/admin/jobs',{credentials:'same-origin'});if(response.ok)remoteJobs=await response.json();else toast('Could not load listings. Please sign in again.')}catch{toast('Could not reach the server.')}renderAdmin();loadClients();loadPayments();loadSecurity()}
 initializeAdminJobs();
 document.getElementById('adminDate').textContent=new Intl.DateTimeFormat(undefined,{weekday:'long',month:'long',day:'numeric'}).format(new Date()).toUpperCase();
+
+function cell(row,text,strong){const td=document.createElement('td');if(strong){const b=document.createElement('strong');b.textContent=text;td.append(b)}else td.textContent=text;row.append(td);return td}
+async function loadPayments(){
+  try{const response=await fetch('/api/admin/payments',{credentials:'same-origin'});if(!response.ok)return;const payments=await response.json();
+    const body=document.getElementById('paymentRows');body.replaceChildren();
+    payments.forEach(p=>{const row=document.createElement('tr');cell(row,p.userName||p.email,true).append(document.createElement('br'),Object.assign(document.createElement('small'),{textContent:p.email}));cell(row,`${p.planName} × ${p.months} mo`);cell(row,`${p.currency} ${p.amount.toLocaleString()}`);cell(row,p.reference);cell(row,p.status);
+      const actions=document.createElement('td');if(p.status==='pending'){const box=document.createElement('div');box.className='row-actions';for(const [label,action] of [['Approve','approve'],['Reject','reject']]){const button=document.createElement('button');button.className='row-action';button.dataset.payment=p.id;button.dataset.action=action;button.textContent=label;box.append(button)}actions.append(box)}row.append(actions);body.append(row)});
+    document.getElementById('paymentEmpty').hidden=payments.length>0;document.getElementById('navPaymentCount').textContent=payments.filter(p=>p.status==='pending').length}catch{}
+}
+document.getElementById('paymentRows').addEventListener('click',async event=>{
+  const button=event.target.closest('[data-payment]');if(!button)return;button.disabled=true;
+  try{const response=await fetch(`/api/admin/payments/${encodeURIComponent(button.dataset.payment)}/${button.dataset.action}`,{method:'POST',credentials:'same-origin'});if(!response.ok)throw await requestError(response,'Could not update the payment.');toast(button.dataset.action==='approve'?'Payment approved. Plan activated.':'Payment rejected');await loadPayments()}
+  catch(error){toast(error.message);button.disabled=false}
+});
+async function loadSecurity(){
+  try{const response=await fetch('/api/admin/security',{credentials:'same-origin'});if(!response.ok)return;const data=await response.json();
+    document.getElementById('mailStatus').textContent=data.mail==='not configured'?'not set up (codes are only printed in the server log)':`sending via ${data.mail}`;
+    const blocked=document.getElementById('blockedRows');blocked.replaceChildren();
+    data.blocked.forEach(item=>{const row=document.createElement('tr');cell(row,item.ip,true);cell(row,item.reason);cell(row,new Date(item.until).toLocaleString());const td=document.createElement('td');const button=document.createElement('button');button.className='row-action';button.dataset.unblock=item.ip;button.textContent='Unblock';td.append(button);row.append(td);blocked.append(row)});
+    document.getElementById('blockedEmpty').hidden=data.blocked.length>0;document.getElementById('navBlockedCount').textContent=data.blocked.length;
+    const events=document.getElementById('eventRows');events.replaceChildren();
+    data.events.slice(0,30).forEach(item=>{const row=document.createElement('tr');cell(row,new Date(item.at).toLocaleString());cell(row,item.type);cell(row,item.ip||'');cell(row,item.detail||'');events.append(row)})}catch{}
+}
+document.getElementById('blockedRows').addEventListener('click',async event=>{
+  const button=event.target.closest('[data-unblock]');if(!button)return;
+  try{await fetch('/api/admin/security/unblock',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({ip:button.dataset.unblock})});toast('Address unblocked');await loadSecurity()}catch(error){toast(error.message)}
+});

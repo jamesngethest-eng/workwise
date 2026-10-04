@@ -23,18 +23,38 @@
       <a class="nav-link" href="#saved" id="savedNav">Saved <span class="saved-count" id="savedCount">0</span></a>
       <a class="nav-link" href="#community" id="communityNav">Community</a>
       <a class="nav-link hire-nav" href="#employer" id="hireNav">Hire talent</a>
+      <a class="nav-link" href="#plans" id="plansNav">Plans</a>
     </nav>
     <div class="top-actions"><button class="header-auth-btn" id="headerAuthButton" type="button">Sign in</button><button class="icon-btn notification" aria-label="Notifications">♧<i></i></button><span class="divider"></span><button class="profile" id="accountButton" aria-label="Account"><span class="avatar avatar-you">JD</span><span class="profile-name" id="accountName">Jamie Davis</span><span class="chevron">⌄</span></button></div>
   </header>
+  <div class="billing-banner" id="billingBanner" hidden><span id="billingBannerText"></span> <a href="#" id="billingBannerLink">View plans</a></div>
 
   <main id="browse">
+
+    <section class="account-page employer-page plans-page" id="plansPage" hidden>
+      <div class="employer-welcome"><div><div class="eyebrow green-text">PLANS &amp; BILLING</div><h1>Simple pricing <span>✦</span></h1><p id="plansIntro">Everything is free for the first two months.</p></div></div>
+      <div class="plan-status" id="planStatus"></div>
+      <div class="plan-grid" id="planGrid"></div>
+      <section class="employer-card" id="payCard" hidden>
+        <div class="side-title">PAY FOR A PLAN</div>
+        <p class="pay-instructions" id="payInstructions"></p>
+        <form id="payForm" class="pay-form">
+          <label>Plan<select id="payPlan"></select></label>
+          <label>For how long<select id="payMonths"><option value="1">1 month</option><option value="3">3 months</option><option value="6">6 months</option><option value="12">12 months</option></select></label>
+          <label>Payment reference / transaction code<input id="payReference" required minlength="4" maxlength="40" placeholder="e.g. the code from your payment message" autocomplete="off"></label>
+          <button type="submit" class="primary-btn" id="paySubmit">Submit payment <span>↗</span></button>
+        </form>
+        <p class="pay-note">The administrator checks your payment and activates your plan, usually within a day.</p>
+      </section>
+      <section class="employer-card" id="paymentsCard" hidden><div class="side-title">YOUR PAYMENTS</div><div id="paymentList"></div></section>
+    </section>
     <section class="community-page" id="communityPage" hidden>
       <div class="community-heading"><div><div class="eyebrow green-text">YOUR NETWORK</div><h1>Community <span>✳</span></h1><p>Keep the conversation going with your clients and collaborators.</p></div><button class="outline-btn" id="backToJobs">← Back to jobs</button></div>
       <section class="community-shell">
         <aside class="conversation-sidebar"><div class="conversation-top"><h2>Messages</h2><button class="compose-btn" id="newMessage" aria-label="New message">＋</button></div><label class="conversation-search"><span>⌕</span><input id="conversationSearch" type="search" placeholder="Search conversations" aria-label="Search conversations"></label><div class="conversation-list" id="conversationList"></div></aside>
         <section class="chat-panel" id="chatPanel"><div class="chat-empty"><div class="chat-empty-icon">✉</div><h2>Your conversations, all in one place</h2><p>Choose a client to pick up where you left off.</p></div></section>
       </section>
-      <footer class="main-footer"><span>© <span data-current-year>2025</span> Workwise, Inc.</span><a href="#">Terms of Service</a><a href="#">Privacy Policy</a><a href="#">Cookie Settings</a></footer>
+      <footer class="main-footer"><span>© <span data-current-year>2025</span> Workwise, Inc.</span><a href="privacy.html#terms">Terms of Service</a><a href="privacy.html">Privacy Policy</a><a href="privacy.html#cookies">Cookie Settings</a></footer>
     </section>
     <section class="account-page" id="loginPage" hidden>
       <div class="login-brand"><span class="brand-mark">w</span><span>Welcome to Workwise</span></div>
@@ -42,7 +62,7 @@
       <div class="role-switch" role="group" aria-label="Choose account type"><button class="role-option active" data-role="freelancer"><span>◉</span><strong>I’m looking for work</strong><small>Find projects and grow your career</small></button><button class="role-option" data-role="employer"><span>◈</span><strong>I’m hiring</strong><small>Post a job and find great talent</small></button></div>
       <div class="account-mode-switch"><span id="modePrompt">New to Workwise?</span><button type="button" id="accountModeToggle">Create an account</button></div>
       <form class="login-form" id="loginForm"><label id="fullNameField" hidden>Full name<input type="text" id="loginName" placeholder="Your name" autocomplete="name"></label><label>Email address<input type="email" id="loginEmail" placeholder="you@example.com" required autocomplete="email"></label><label>Password<input type="password" id="loginPassword" placeholder="At least 8 characters" required minlength="8" autocomplete="current-password"></label><div class="login-options"><label class="remember-option"><input type="checkbox" id="rememberAccount" checked> Remember me</label><a href="#" id="forgotPassword">Forgot password?</a></div><div class="login-error" id="accountError" role="alert" hidden></div><button class="primary-btn login-submit" id="accountSubmit" type="submit">Sign in <span>↗</span></button></form>
-      <p class="login-legal">By continuing, you agree to Workwise’s <a href="#">Terms</a> and <a href="#">Privacy Policy</a>.</p><button class="text-btn" id="loginBack">← Back to Workwise</button>
+      <p class="login-legal">By continuing, you agree to Workwise’s <a href="privacy.html#terms" target="_blank">Terms</a> and <a href="privacy.html" target="_blank">Privacy Policy</a>.</p><button class="text-btn" id="loginBack">← Back to Workwise</button>
     </section>
     <section class="account-page employer-page" id="employerPage" hidden>
       <div class="employer-welcome"><div><div class="eyebrow green-text">EMPLOYER WORKSPACE</div><h1>Find your next great hire <span>✦</span></h1><p>Post a job and connect with independent talent.</p></div><div class="employer-actions"><button class="outline-btn" id="employerEditProfile">Edit profile</button><button class="outline-btn" id="switchRole">Sign out</button></div></div>
@@ -85,7 +105,7 @@
         <div class="job-list" id="jobList"></div>
         <div class="empty-state" id="emptyState" hidden><div>⌕</div><h3>No jobs found</h3><p>Try a different search or adjust your filters.</p><button class="outline-btn" id="clearFilters">Clear filters</button></div>
         <button class="load-more" id="loadMore">Load more jobs <span>↓</span></button>
-        <footer class="main-footer"><span>© <span data-current-year>2025</span> Workwise, Inc.</span><a href="#">Terms of Service</a><a href="#">Privacy Policy</a><a href="#">Cookie Settings</a><a href="admin.html">Admin</a><span class="footer-right">Made for the work you love <b>♥</b></span></footer>
+        <footer class="main-footer"><span>© <span data-current-year>2025</span> Workwise, Inc.</span><a href="privacy.html#terms">Terms of Service</a><a href="privacy.html">Privacy Policy</a><a href="privacy.html#cookies">Cookie Settings</a><a href="admin.html">Admin</a><span class="footer-right">Made for the work you love <b>♥</b></span></footer>
       </section>
     </div>
   </main>
@@ -99,10 +119,26 @@
       <label>About you<textarea id="profileBioInput" rows="4" maxlength="600" placeholder="Describe your experience and the work you do."></textarea></label>
       <label>Skills <small>Separate each skill with a comma</small><input id="profileSkillsInput" maxlength="500" placeholder="Figma, User research, Prototyping"></label>
       <label>Portfolio website<input id="profilePortfolioInput" type="url" maxlength="300" placeholder="https://your-portfolio.com"></label>
+      <fieldset class="privacy-box"><legend>Privacy &amp; data</legend>
+        <label class="check-row"><input type="checkbox" id="privacyShowEmail"> Let hirers see my email address on my proposals</label>
+        <div class="privacy-actions"><button type="button" class="outline-btn" id="exportData">Download my data</button><button type="button" class="outline-btn danger-btn" id="deleteAccount">Delete my account</button></div>
+        <small>Read our <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</small>
+      </fieldset>
       <div class="profile-form-error" id="profileFormError" role="alert" hidden></div>
       <div class="profile-dialog-actions"><button type="button" class="outline-btn" id="cancelProfileEdit">Cancel</button><button type="submit" class="primary-btn" id="saveProfileButton">Save profile</button></div>
     </form>
   </dialog>
+  <dialog class="profile-dialog" id="recoverDialog" aria-labelledby="recoverTitle">
+    <form id="recoverForm">
+      <div class="profile-dialog-heading"><div><div class="eyebrow green-text">ACCOUNT RECOVERY</div><h2 id="recoverTitle">Reset your password</h2></div><button type="button" class="profile-dialog-close" id="closeRecover" aria-label="Close">×</button></div>
+      <p class="recover-help" id="recoverHelp">Enter the email you signed up with and we will email you a 6-digit code.</p>
+      <label>Email address<input id="recoverEmail" type="email" required autocomplete="email" placeholder="you@gmail.com"></label>
+      <div id="recoverStep2" hidden><label>6-digit code<input id="recoverCode" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="123456"></label><label>New password<input id="recoverPassword" type="password" minlength="8" autocomplete="new-password" placeholder="At least 8 characters"></label></div>
+      <div class="profile-form-error" id="recoverMessage" role="alert" hidden></div>
+      <div class="profile-dialog-actions"><button type="button" class="outline-btn" id="recoverCancel">Cancel</button><button type="submit" class="primary-btn" id="recoverSubmit">Send code</button></div>
+    </form>
+  </dialog>
+  <script src="trap.js"></script>
   <script src="app.js"></script>
   <script src="community.js"></script>
   <script src="account.js"></script>
