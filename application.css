@@ -78,3 +78,7 @@
 .danger-btn{color:#b04444!important;border-color:#efd3d3!important}
 .recover-help{font-size:13px;color:#4d5a52;margin:0 0 6px}
 .profile-form-error.good{background:#e8f4ea;color:#1f6b3a;border-color:#bfe0c8}
+
+.recover-resend{margin:2px 0 8px;font-size:13px;color:#4d5a52}
+.link-btn{border:0;background:none;padding:0;color:#176b50;font-weight:700;text-decoration:underline;cursor:pointer;font-size:inherit}
+.link-btn:disabled{opacity:.6;cursor:default;text-decoration:none}

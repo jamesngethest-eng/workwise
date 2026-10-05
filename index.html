@@ -133,7 +133,7 @@
       <div class="profile-dialog-heading"><div><div class="eyebrow green-text">ACCOUNT RECOVERY</div><h2 id="recoverTitle">Reset your password</h2></div><button type="button" class="profile-dialog-close" id="closeRecover" aria-label="Close">×</button></div>
       <p class="recover-help" id="recoverHelp">Enter the email you signed up with and we will email you a 6-digit code.</p>
       <label>Email address<input id="recoverEmail" type="email" required autocomplete="email" placeholder="you@gmail.com"></label>
-      <div id="recoverStep2" hidden><label>6-digit code<input id="recoverCode" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="123456"></label><label>New password<input id="recoverPassword" type="password" minlength="8" autocomplete="new-password" placeholder="At least 8 characters"></label></div>
+      <div id="recoverStep2" hidden><label>6-digit code<input id="recoverCode" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="123456"></label><p class="recover-resend">Didn’t get it? <button type="button" class="link-btn" id="recoverResend">Send a new code</button></p><label>New password<input id="recoverPassword" type="password" minlength="8" autocomplete="new-password" placeholder="At least 8 characters"></label></div>
       <div class="profile-form-error" id="recoverMessage" role="alert" hidden></div>
       <div class="profile-dialog-actions"><button type="button" class="outline-btn" id="recoverCancel">Cancel</button><button type="submit" class="primary-btn" id="recoverSubmit">Send code</button></div>
     </form>

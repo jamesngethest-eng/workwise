@@ -195,3 +195,13 @@ document.getElementById('deleteAccount').addEventListener('click',async()=>{
   try{await apiRequest('/api/account',{method:'DELETE',body:JSON.stringify({password})});document.getElementById('profileDialog').close?.();showToast('Your account has been deleted.');setTimeout(()=>window.location.reload(),1200)}
   catch(error){showToast(error.message)}
 });
+
+// "Send a new code": works immediately (3-second pause only stops accidental double-clicks)
+document.getElementById('recoverResend').addEventListener('click',async()=>{
+  const button=document.getElementById('recoverResend');if(button.disabled)return;button.disabled=true;
+  try{
+    const result=await apiRequest('/api/auth/forgot',{method:'POST',body:JSON.stringify({email:document.getElementById('recoverEmail').value.trim()})});
+    document.getElementById('recoverCode').value='';document.getElementById('recoverCode').focus();recoverMessage('A new code is on its way. Older codes no longer work. Check spam if you do not see it.',true)
+  }catch(error){recoverMessage(error.message,false)}
+  let left=3;const timer=setInterval(()=>{left-=1;button.textContent=left>0?`Send a new code (${left})`:'Send a new code';if(left<=0){clearInterval(timer);button.disabled=false}},1000);button.textContent='Send a new code (3)'
+});
