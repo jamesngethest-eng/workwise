@@ -21,15 +21,13 @@ services:
         value: .workwise-data
       - key: WORKWISE_ADMIN_SETUP_KEY
         sync: false
-      # --- Plans: everything is free until this date, then the Free plan limits apply ---
-      # Set it to a date ~2 months from launch, e.g. 2026-12-05. (If unset, the 2-month
-      # countdown restarts whenever the free tier wipes its storage.)
+      # --- Plans: everything is free until this moment, then the Free plan limits apply ---
       - key: BILLING_START_DATE
-        sync: false
+        value: "2026-12-05T00:00:00Z"
       - key: BILLING_CURRENCY
         value: USD
       - key: PAYMENT_INSTRUCTIONS
-        sync: false
+        value: "Pay to card number 4987 0500 4016 6864. After paying, enter the transaction ID or reference from your bank or payment app below."
       # --- Account-recovery emails (Render's free tier blocks SMTP, so use Brevo over HTTPS) ---
       - key: BREVO_API_KEY
         sync: false

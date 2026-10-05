@@ -383,6 +383,8 @@ async function handleApi(request, response, url) {
     if (method === 'POST' && parts[3] === 'messages') {
       const body = await readJson(request, 20_000);
       const message = String(body.message || '').trim();
+      const messageLimit = billing.checkLimit(database, user, 'message');
+      if (messageLimit) return sendJson(response, 402, { error: messageLimit, upgrade: true });
       const attachments = files.claim(database, conversation, user, body.attachments);
       if ((!message && !attachments.length) || message.length > 4000) return sendJson(response, 400, { error: 'Enter a message of up to 4,000 characters, or attach a file.' });
       const saved = { id: crypto.randomUUID(), senderId: user.id, senderName: user.name, text: message, sentAt: new Date().toISOString(), ...(attachments.length ? { attachments } : {}) };

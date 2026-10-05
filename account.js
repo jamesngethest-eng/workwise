@@ -125,7 +125,7 @@ document.getElementById('recoverForm').addEventListener('submit',async event=>{
 
 // ================= plans & billing =================
 const plansPage=document.getElementById('plansPage');
-const fmtDate=iso=>new Date(iso).toLocaleDateString([],{year:'numeric',month:'long',day:'numeric'});
+const fmtDate=iso=>new Date(iso).toLocaleDateString('en-GB',{year:'numeric',month:'long',day:'numeric',timeZone:'UTC'});
 const planMoney=(plan,months=1)=>`${plan.currency} ${(plan.price*months).toLocaleString()}`;
 function el(tag,className,text){const node=document.createElement(tag);if(className)node.className=className;if(text!==undefined)node.textContent=text;return node}
 async function updateBillingBanner(user){
@@ -148,12 +148,12 @@ async function renderPlans(){
   const line=text=>{box.append(el('p','',text))};
   if(status.state==='trial')line(`You are in your free period: ${status.daysLeft} day${status.daysLeft===1?'':'s'} left (until ${fmtDate(status.billingStartsAt)}). Everything is unlimited until then.`);
   else if(status.state==='active')line(`${status.planName} is active until ${fmtDate(status.expiresAt)} (${status.daysLeft} days left).`);
-  else if(status.state==='free'){line(status.expired?'Your paid plan has ended. You are on the Free plan.':'You are on the Free plan.');const roleUsage=window.workwiseCurrentUser?.role==='employer'?`Active jobs: ${status.usage.activeJobs} of ${freeLimits.activeJobs}`:`Proposals this month: ${status.usage.proposalsThisMonth} of ${freeLimits.proposalsPerMonth}`;line(roleUsage)}
+  else if(status.state==='free'){line(status.expired?'Your paid plan has ended. You are on the Free plan.':'You are on the Free plan.');const roleUsage=window.workwiseCurrentUser?.role==='employer'?`Active jobs: ${status.usage.activeJobs} of ${freeLimits.activeJobs}`:`Proposals this month: ${status.usage.proposalsThisMonth} of ${freeLimits.proposalsPerMonth}`;line(roleUsage);line(`Messages this month: ${status.usage.messagesThisMonth} of ${freeLimits.messagesPerMonth}`)}
   else if(status.state==='exempt')line('Admin accounts do not need a plan.');
   else line('Sign in to see your plan and subscribe.');
   const grid=document.getElementById('planGrid');grid.replaceChildren();
   const freeCard=el('article','plan-card');freeCard.append(el('h3','','Free'),el('p','plan-price','0'),el('ul','plan-features'));
-  [`Hirers: ${freeLimits.activeJobs} active job post`,`Freelancers: ${freeLimits.proposalsPerMonth} proposals per month`,'Messaging and attachments included','Full privacy controls'].forEach(f=>freeCard.querySelector('ul').append(el('li','',f)));grid.append(freeCard);
+  [`Hirers: ${freeLimits.activeJobs} active job post`,`Freelancers: ${freeLimits.proposalsPerMonth} proposals per month`,`${freeLimits.messagesPerMonth} messages per month`,'Full privacy controls'].forEach(f=>freeCard.querySelector('ul').append(el('li','',f)));grid.append(freeCard);
   plans.forEach(plan=>{
     const card=el('article','plan-card featured');card.append(el('h3','',plan.name),el('p','plan-price',`${planMoney(plan)} / month`));const list=el('ul','plan-features');plan.features.forEach(f=>list.append(el('li','',f)));card.append(list);
     const choose=el('button','primary-btn',signedIn?'Choose this plan':'Sign in to subscribe');choose.type='button';
@@ -161,7 +161,9 @@ async function renderPlans(){
     card.append(choose);grid.append(card)
   });
   const payCard=document.getElementById('payCard');payCard.hidden=!(signedIn&&status.state!=='exempt'&&plans.length);
-  document.getElementById('payInstructions').textContent=data.instructions||'';
+  const instructionsBox=document.getElementById('payInstructions');instructionsBox.replaceChildren(document.createTextNode(data.instructions||''));
+  const cardMatch=(data.instructions||'').match(/\b(?:\d{4}[ -]?){3}\d{4}\b/);
+  if(cardMatch){const copy=el('button','link-btn','Copy card number');copy.type='button';copy.style.marginLeft='8px';copy.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(cardMatch[0].replace(/\D/g,''));showToast('Card number copied')}catch{showToast('Select and copy the number manually')}});instructionsBox.append(copy)}
   const select=document.getElementById('payPlan');select.replaceChildren();plans.forEach(plan=>{const option=el('option','',`${plan.name} · ${planMoney(plan)} / month`);option.value=plan.id;select.append(option)});
   const paymentsCard=document.getElementById('paymentsCard'),list=document.getElementById('paymentList');list.replaceChildren();paymentsCard.hidden=!data.payments.length;
   data.payments.forEach(p=>{const row=el('div','payment-row');row.append(el('strong','',`${p.planName} · ${p.months} month${p.months>1?'s':''} · ${p.currency} ${p.amount.toLocaleString()}`),el('span',`payment-status ${p.status}`,p.status),el('small','',`Ref ${p.reference} · ${fmtDate(p.createdAt)}`));list.append(row)})
